@@ -9,6 +9,11 @@ body {
     padding: 1em;
     background-color: #fafafa;
 }
- time {
-    font-size: smaller;
- }
+
+time {
+font-size: smaller;
+}
+
+pre {
+ overflow-y: auto;
+}

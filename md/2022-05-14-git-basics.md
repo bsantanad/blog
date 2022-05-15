@@ -12,7 +12,7 @@ when I was starting, but, hey, you are not me, so your mileage may vary.
 ## what is git?
 
 `git` is a version control system. This means it will help you keep track of
-the versions of your code. 
+the versions of your code.
 
 Let's see an example, say you just finished an assignment for your _Coding in
 C_ class. You are just reviewing the requirements and checking all the boxes.
@@ -34,7 +34,7 @@ where we had not made something stupid.
 
 It will help you a lot, even if you are working alone.
 
-## using git 
+## using git
 
 Going back to the example of your _C assignment_, say you knew how to use git
 before starting to code. So the first step you did was create the directory
@@ -56,7 +56,7 @@ this:
 ├── main.c
 ├── lib.c
 └── lib.h
-└── trash 
+└── trash
 ```
 We do not want to keep track of the trash file right? So we will **add** the
 files we want to track with the `git add` command.
@@ -113,7 +113,7 @@ the functions inside lib.c to be used in main. main.c has ....
 
 Signed-off-by: dostoyevski crime@punishment.com
 
-# changes done 
+# changes done
 ```
 This description and title will help anyone who wonders what does that commit
 adds or removes (including you). If you scroll down you can see the changes you
@@ -149,7 +149,7 @@ Date:   Sat May 14 17:49:34 2022 -0500
 Let's sum up.
 
 - `git init`: initialise git in a directory
-- `git status`: check what are we doing with git (the state of the repo) 
+- `git status`: check what are we doing with git (the state of the repo)
 - `git add <somefile>`: add a file to the stage env (like placing the paper in
   the copy machine)
 - `git commit -vs`: take the snapshot, sign it, and document it (like pressing

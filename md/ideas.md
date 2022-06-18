@@ -1,7 +1,6 @@
 # posts about
 - git
     - git stash
-    - squashing commits in git 
     - git remote urls and all that
 
 - groff: how to use it and cheatsheet
@@ -10,6 +9,3 @@
 - why people dont like systemd
 - using vim
 - array as binary search tree 
-
-
-

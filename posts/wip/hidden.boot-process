@@ -1,0 +1,14 @@
+===========================
+notes on linux boot process
+===========================
+
+https://web.archive.org/web/20091023233135/http://axiom.anu.edu.au/~okeefe/p2b/power2bash/power2bash-1.html
+
+Hardware
+1. UEFI or BIOS
+2. Boot loader
+Kernel Space
+3. Kernel
+User Space
+4. Init
+5. Other user space

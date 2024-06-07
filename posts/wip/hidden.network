@@ -1,0 +1,70 @@
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, inital-scale=1.0">
+  <title> bsantanad.com </title>
+  <meta name="description" content="personal site">
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/post.css">
+</head>
+<body>
+  <style>
+        body * + * {
+            margin-top: 1em;
+        }
+  </style>
+  <header>
+    <h1> bsantanad.com </h1>
+    <nav>
+        <ul>
+          <li><a href="/">home</a></li>
+          <li><a href="/about.html">about</a></li>
+        </ul>
+    </nav>
+  </header>
+  <main class='network'>
+
+    <h1>everything I know about networks</h1>
+    <small>(which is not that much to be honest)</small>
+    <br>
+    <br>
+    <time datetime="2022-06-17"> January 7, 2024 </time>
+    <p>
+        You are about to read the notes I took while watching 
+        <a href='https://www.youtube.com/@PracticalNetworking'>Practical Networking</a>'s
+        series on Networking Fundamentals. Please refer there for more info.
+    </p>
+    <p>
+       Let us start with some basic definitions.
+    </p>
+    <ul>
+        <li><b>host</b></li>
+            <p>
+            Any device which sends and/or receive traffic. We have two types:
+            </p>
+            <ul>
+                <li>client</li>
+                <li>server</li>
+            </ul>
+            <p>
+            which is which depends on the role they are having in the
+            communication.
+            </p>
+        <li><b>ip address</b></li>
+            <p>
+                Identifier of each host.
+            </p>
+            <ul>
+                <li>Stamped into everything each host sends</li>
+                <li>They are heirachically assinged, for example</li>
+                <ul>
+                    <li>Some Company: 10.x.x.x</li>
+                    <ul>
+                        <li> New York Office: 10.20.x.x</li>
+                        <li> London Office: 10.30.x.x</li>
+                        <li> Mexico Office: 10.40.x.x</li>
+                    </ul>
+                </ul>
+            </ul>
+            <p>This is called subnetting</p>
+    </ul>

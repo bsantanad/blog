@@ -9,8 +9,8 @@
 }
 
 body {
-    background-color: #e9e9e9;
-    font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen-Sans,Ubuntu,Cantarell,"Helvetica Neue",sans-serif;
+    background-color: #F5FCFF;
+    font-family: -apple-system,sans-serif;
     color: #222222;
     max-width: 1080px;
     margin: 0 auto;
@@ -68,7 +68,6 @@ header > nav > ul > li + li {
 
 header > nav > ul > li > a {
    text-decoration: none;
-   background-color: white;
    color: black;
 }
 
@@ -84,9 +83,7 @@ header > nav > ul > li > a:visited {
 
 
 header > nav > ul > li > a:hover {
-   background-color: #1951B7;
-   color: white;
-   box-shadow: inset 0 0 10px #103476;
+   color: blue;
 }
 
 header > nav > ul > li > a:active {
@@ -96,9 +93,11 @@ header > nav > ul > li > a:active {
 
 main {
     padding: 0.7em 1.5em 1em 1.5em;
+    margin-bottom: 2em;
     background-color: white;
     border-bottom-right-radius: 1em;
     border-bottom-left-radius: 1em;
+    border: 1px solid black;
 }
 
 main > article > h2 {

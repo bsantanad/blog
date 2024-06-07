@@ -13,4 +13,5 @@ pre {
     background-color: white;
     padding: 3em 1em;
     border: 1px solid black;
+    overflow-x: auto;
 }

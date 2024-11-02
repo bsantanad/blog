@@ -13,6 +13,20 @@
         }
         pre {
             border: 1px solid black;
+            overflow-x: auto;
+        }
+        h2 > a {
+            color: black;
+            text-decoration: none;
+        }
+        h2 > a:hover {
+            text-decoration: underline;
+        }
+        h2 > a:visited {
+            color: black;
+        }
+        a:visited {
+            color: blue;
         }
     </style>
 </head>
@@ -20,7 +34,8 @@
 <hr>
 <h1>~ cka prep</h1>
 <hr>
-<h2>Exam Details</h2>
+<a href='#table'>Table of Contents</a>
+<h2 id='exam_details'><a href='#exam_details'>Exam Details</a></h2>
 
 <ul>
     <li>
@@ -79,7 +94,7 @@ When killing objects you may want to not wait for it to be shut down
 gracefully, you can use <i>`--force`</i> to kill the object.
 </p>
 
-<h2> Cluster Architecture, Installation and Configuration </h2>
+<h2 id='cluster_arch'> <a href='#cluster_arch'>Cluster Architecture, Installation and Configuration </a></h2>
 
 <p>
 Typical tasks you would expect a k8s admin to know, understanding the
@@ -441,6 +456,352 @@ aggregationRule:
       rbac-service-delete: "true"
 rules: []
 </pre>
+
+<h2 id='creating_and_managing_k8s'><a href='#creating_and_managing_k8s'>Creating and Managing a K8s Cluset</a></h2>
+
+<p>
+Common tasks an admin is expected to perform are:
+</p>
+
+<ul>
+    <li>bootstrapping a control plane node</li>
+    <li>bootstrapping worker nodes and joining them to the cluster</li>
+    <li>upgrading a cluster to a newer version</li>
+</ul>
+
+<p>
+For bootstrapping oprations we use <i>`kubeadm`</i>. You will need to provision
+the underlying infra before, using ansible or terraform.
+</p>
+
+<p>
+For the exam you can expect <i>`kubeadm`</i> to be installed already.
+</p>
+
+<p>
+To start a cluster basically on your master machine, you need on have a
+container runtime up and running, such as <i>`containerd`</i>. Then you follow
+some steps:
+<ul>
+  <li> Install <a href='https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/'>kubeadm</a> on the nodes. </li>
+  <li>
+    On master run
+    <pre>
+sudo kubeadm init --pod-network-cidr 172.18.0.0/16
+    </pre>
+  </li>
+  <li>
+    Check all the logs that were printed. From there you can copy the snippet
+    on getting your kubeconfig file.
+    <pre>
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+    </pre>
+  </li>
+  <li>
+    Keep reading the logs, from there you will also be able to get, the command to join the workers.
+    <pre>
+kubeadm join "some_ip" --token some_token \
+  --discovery-token-ca-cert-hash some:cert
+    </pre>
+  </li>
+  <li>
+    <p>
+        Finally we need to deploy a Container network interface so pods can
+        talk to each other. There are a lot of options, Flannel, Calico, and so
+        on.
+    </p>
+    <p>
+        At the end of the day, whichever your choose, probably you will  only
+        have to  run a <i>`k apply -f`</i> command.
+    </p>
+  </li>
+  <li>
+    Verify everything by doing <i>`k get nodes`</i>.
+  </li>
+</ul>
+</p>
+<h2 id='highly_avaliable'>Highly Available Cluster</h2>
+<p>
+    If we have a cluster, with just one node as a control plane, it can become
+    risky. If the control plane node dies, we are not going to be able to talk
+    with k8s API; neither the workers.
+</p>
+<p>
+    There is this concept of High-availability (HA) clusters, these help with
+    scalability and redundancy.  Due to the complexity of setting them up, it
+    is not likely you are going to have to perform the steps during the exam.
+    But this talks about the idea of having multiple control planes nodes.
+    There are different architectures, here I will briefly explain some.
+</p>
+<h3>Stacked etcd topology</h3>
+<p>
+    This involves creating two or more control plane nodes where etcd is
+    located <b>inside</b> the node.  These will talk to the workers via a load
+    balancer.
+</p>
+<h3>External etcd topology</h3>
+<p>
+    This involves creating two or more control plane nodes where etcd is
+    located <b>outside</b> the node. These will talk to the workers via a load
+    balancer. Do note that for these you need a extra node per control plane.
+    Since we will have an <i>etcd</i> node per control node.
+</p>
+
+<p>
+    The main difference is that etcd is outside the control nodes, so if a
+    control node fails, etcd will still be there.
+</p>
+
+<h2 id='upgrade_k8s'>Upgrade k8s version</h2>
+
+<p>
+   Only upgrade from a minor version to a next higher one. <i>1.18 -> 1.19
+   </i>, or from  a patch version to a higher one. <i>1.18.0 -> 1.18.3</i>.
+   Abstain from jumping up multiple minor versions, to avoid unexpected side
+   effects.
+</p>
+
+<h3>Upgrade Control Planes</h3>
+<p>
+    If you are managing a high available cluster, you need to upgrade one
+    control plane node at a time.
+</p>
+<ol>
+    <li>
+        <p>ssh to the control plane</p>
+    </li>
+    <li>
+        <p>get current version, you can do <i>`k get nodes`</i></p>
+    </li>
+    <li>
+        <p>
+            upgrade <i>kubeadm</i> to the version you want with your package
+            manager.
+        </p>
+        <pre>
+sudo apt-get install -y kubeadm=1.19.0-00
+        </pre>
+    </li>
+    <li>
+        <p>Check which versions are available to upgrade to</p>
+        <pre>
+$ sudo kubeadm upgrade plan
+...
+[upgrade] Fetching available versions to upgrade to
+[upgrade/versions] Cluster version: v1.18.20
+[upgrade/versions] kubeadm version: v1.19.0
+I0708 17:32:53.037895   17430 version.go:252] remote version is much newer: \
+v1.21.2; falling back to: stable-1.19
+[upgrade/versions] Latest stable version: v1.19.12
+[upgrade/versions] Latest version in the v1.18 series: v1.18.20
+...
+You can now apply the upgrade by executing the following command:
+
+	kubeadm upgrade apply v1.19.12
+
+Note: Before you can perform this upgrade, you have to update kubeadm to v1.19.12.
+...
+        </pre>
+    </li>
+    <li>
+        <p> upgrade it <i>`sudo kubeadm upgrade apply v1.19.0`</i></p>
+    </li>
+    <li>
+        <p>we need to <u>drain</u> the node.</p>
+        <p>
+            if the concept of drain is new to you, you are not alone, it
+            basically means, that the given node will be marked unschedulable
+            to prevent new pods from arriving.
+        </p>
+        <pre>
+kubectl drain kube-control-plane --ignore-daemonsets
+        </pre>
+
+    </li>
+    <li>
+        <p>
+            Upgrade <i>kubelet</i> and <i>kubectl</i> to the same version.
+            Again, using your package manager.
+        </p>
+    </li>
+    <li>
+        <p>Restart and reaload <i>`kubelet`</i> process using <i>systemclt</i></p>
+    </li>
+    <li>
+        <p>Mark node as schedulable again</p>
+        <p><i>`k uncordon kube-control-plane`</i></p>
+    </li>
+    <li>
+        <p>
+            If you do <i>`k get nodes`</i> again now you should see that node
+            with the new version.
+        </p>
+    </li>
+</ol>
+
+
+<h3>Upgrade Worker nodes</h3>
+
+<ol>
+    <li>
+        <p>ssh to the node</p>
+    </li>
+    <li>
+        <p>upgrade <i>kubeadm</i> using your package manager</p>
+    </li>
+    <li>
+        <p>upgrade the node using <i>kubeadm</i></p>
+        <pre>
+sudo kubeadm upgrade node
+        </pre>
+    </li>
+    <li>
+        <p>we need to <u>drain</u> (make it unscheduable) the node.</p>
+        <pre>
+kubectl drain worker-node --ignore-daemonsets
+        </pre>
+    </li>
+    <li>
+        <p>
+            Upgrade <i>kubelet</i> and <i>kubectl</i> to the same version.
+        </p>
+    </li>
+    <li>
+        <p>Restart and reaload <i>`kubelet`</i> process using <i>systemclt</i></p>
+    </li>
+    <li>
+        <p>Mark node as schedulable again</p>
+        <p><i>`k uncordon worker-node`</i></p>
+    </li>
+    <li>
+        <p>
+            If you do <i>`k get nodes`</i> again now you should see that node
+            with the new version.
+        </p>
+    </li>
+
+</ol>
+
+<h2 class='etcd_backup'>Backing up and Restoring etcd</h2>
+
+<p>
+<i>`etcd`</i> is where k8s stores both the declared and observed states of the
+cluster. It uses a distributed key-value store.
+</p>
+
+<p>
+It is important to have a backup, in case of some issue. The backup process
+should happen periodically  and in short time frames.
+</p>
+
+<p>
+We will use the <i>etcdctl</i> tool to do this.:
+</p>
+<h3>Backup Process</h3>
+<ol>
+    <li>
+        <p>ssh into the control pane</p>
+    </li>
+    <li>
+        <p>check you have a higher than 3.4 etcdctl version installed</p>
+    </li>
+    <li>
+        <p>Get and describe the pod etcd is running</p>
+        <p><i>`k get pods -n kube-system`</i><p>
+        <p><i>`k describe pod etcd-smth l-n kube-system`</i><p>
+    </li>
+    <li>
+        <p>
+            Look for the value under <i>--listen-client-urls</i>. We are going
+            to need to the path for the <i>server.crt</i>, <i>.key</i>, and the
+            <i>ca.crt</i>.
+        </p>
+        <pre>
+$ sudo ETCDCTL_API=3 etcdctl
+  --cacert=<trusted-ca-file> --cert=<cert-file> --key=<key-file> \
+  snapshot save <backup-file-location>
+        </pre>
+        <p>
+            It would look something like this:
+        </p>
+        <pre>
+sudo ETCDCTL_API=3 etcdctl --cacert=/etc/kubernetes/pki/etcd/ca.crt \
+  --cert=/etc/kubernetes/pki/etcd/server.crt \
+  --key=/etc/kubernetes/pki/etcd/server.key \
+  snapshot save /opt/etcd-backup.db
+        </pre>
+    </li>
+    <li>
+        <p>Store the backup in a safe place</p>
+    </li>
+</ol>
+<h3>Restore Process</h3>
+<ol>
+    <li>
+        <p>ssh into the system</p>
+    </li>
+    <li>
+        <p>run the <i>`snapshot restore`</i> command</p>
+        <pre>
+sudo ETCDCTL_API=3 etcdctl --data-dir=/var/lib/from-backup snapshot restore \
+  /opt/etcd-backup.db
+        </pre>
+    </li>
+    <li>
+        <p>Now we need to change the etcd manifest, to point to our backup</p>
+        <p>It is mounted as a volume, with the <i>`etcd-data`</i> name.</p>
+        <p>
+            These manifests are declared under
+            <i>/etc/kubernetes/manifests</i>. The pod will be re-created
+            (automatically?) pointing to the backup directory
+        </p>
+    </li>
+</ol>
+<h2 class='essentials_cluster_arch'>Essentials for Exam</h2>
+<ul>
+    <li>
+        <p>Know how to define RBAC rules</p>
+        <ul>
+            <li>
+                Practice the creation of subjects, and how to tie them together
+                to form the desired access rules.
+            </li>
+        </ul>
+    </li>
+    <li>
+        <p>Know how to create and manage a k8s cluster</p>
+        <ul>
+            <li>
+                Installing new cluster nodes
+            </li>
+            <li>
+                Understand the different HA topologies.
+            </li>
+        </ul>
+    </li>
+    <li>
+        <p>Practice backing up and restoring etcd</p>
+    </li>
+</ul>
+
+
+<hr>
+<h3 id='table'>~ Table of Contents</h3>
+<ul>
+    <li><a href='#exam_details'>Exam Details</a></li>
+    <li>
+        <a href='#cluster_arch'>Cluster Architecture, Installation and Configuration </a>
+        <ul>
+            <li><a href='#creating_and_managing_k8s'>Creating and Managing a K8s Cluster</a></li>
+            <li><a href='#highly_avaliable'>Highly Available Cluster</a></li>
+            <li><a href='#upgrade_k8s'>Upgrade k8s Cluster</a></li>
+            <li><a href='#etcd_backup'>Backing up and Restoring etcd</a></li>
+            <li><a href='#essentials_cluster_arch'>Essentials</a></li>
+        </ul>
+    </li>
+</ul>
 
 
 </body>

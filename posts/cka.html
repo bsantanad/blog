@@ -818,6 +818,160 @@ sudo ETCDCTL_API=3 etcdctl --data-dir=/var/lib/from-backup snapshot restore \
     </li>
 </ul>
 
+<h2 id='troubleshooting' class='chapter'><a href='#troubleshooting'>3. Troubleshooting</a></h2>
+<h3 id='cluster_logging'>Cluster Logging</h3>
+<p>
+Since we will have a node logs, pods logs, container logs it makes sense to
+think about how we will handle these streams. In a cluster, logs should have a
+separate storage and lifecycle independent of nodes, pods or containers.   This
+process is called <i>cluster-level logging.</i>
+</p>
+
+<p>
+One other thing worth mentioning, <b>log rotation</b>, the kubelet daemon is
+responsible for rotating container logs and managing the logging directory
+structure. It tells the container runtime where to write container logs.
+</p>
+
+<p>
+You can configure <i>`containerLogMaxSize`</i> (max size of file) and
+<i>`containerLogMaxFiles`</i> (how many log files can be created)
+</p>
+
+<p>
+So for Cluster-Level logging we have these options:
+</p>
+
+<ul>
+  <li>
+    <p>Use a node-level logging agent</p>
+    <ul>
+      <li>
+        <p>
+            Create a <i>DeamonSet</i> that will act as an agent per node.  It
+            will look inside a directory where the logs are stored and push
+            them to a logging backend.
+        </p>
+      </li>
+    </ul>
+  </li>
+  <li>
+    <p>Include dedicated sidecar container for handling logs in a pod</p>
+  </li>
+  <li>
+    <p>
+        Push the logs directly from the app to a back-end (you have to modify
+        the app code itself)
+    </p>
+  </li>
+</ul>
+
+<h3 id='troubleshooting_pods'>Troubleshooting Pods</h3>
+<p>
+Creating a Pod is pretty simple, as long as the yaml is right k8s will try to
+create it. Nevertheless we need to verify the correct behaviour. The first
+thing is to verify the high-level runtime information of the Pod.
+</p>
+
+<p>
+Check the resources, the deployment, the pods, check the status column. Check
+the number of restarts.
+</p>
+<p class='.important'>
+If the number of restarts is greater than 0, then you might want to check the
+logic of the liveness probe. Identify why the restart was necessary.
+</p>
+
+<p>
+Here are some of the common status errors that one might come across.
+</p>
+<ul>
+  <li>
+    <p>
+      <i>ImagePullBackOff</i> or <i>ErrImagePull</i>: check correct image name,
+      check if image exists in registry, verify network access from node to
+      registry, check auth.
+    </p>
+  </li>
+  <li>
+    <p>
+      <i>CrashLoopBackOff</i>: this means the application or command run in
+      container crashes. Check the command executed. Make sure that the
+      container can be created. Like run it with podman or smth
+    </p>
+  </li>
+  <li>
+    <p>
+      <i>CreateContainerConfigError</i>: the configmap or secret referenced by
+      the container cannot be found. Double check if the objects exists in the
+      namespace.
+    </p>
+  </li>
+</ul>
+
+<p>
+So a quick list on what to do:
+</p>
+<ul>
+  <li>
+    <p>Check status</p>
+  </li>
+  <li>
+    <p>Check events</p>
+  </li>
+  <li>
+    <p>Inspect the logs of the pod</p>
+  </li>
+  <li>
+    <p>
+      If nothing else works, exec into a pods container, see if everything is
+      behaving like it should
+    </p>
+  </li>
+</ul>
+
+<h3 id='troubleshooting_services'>Troubleshooting Services</h3>
+<ul>
+  <li>
+    <p>Ensure the label selector matches the assigned labels of the Pods</p>
+    <ul>
+      <li>
+        <p>
+          A really good command for checking this is the <i>`k get
+          endpoints`</i> command. It will tell you which pods is your service
+          using.
+        </p>
+      </li>
+    </ul>
+  </li>
+  <li>
+    <p>Check the type of a Service.</p>
+    <ul>
+      <li>
+        <p>
+            The default is <i>`ClusterIP`</i>, if so only the pods within that
+            node can talk to the service.
+        </p>
+      </li>
+    </ul>
+  </li>
+  <li>
+    <p>
+        Check the port mapping, meaning check that the service target port is
+        the same as the port exposed by the pod.
+    </p>
+    <ul>
+      <li>
+        <p>
+            The default is <i>`ClusterIP`</i>, if so only the pods within that
+            node can talk to the service.
+        </p>
+      </li>
+    </ul>
+  </li>
+</ul>
+
+
 
 <hr>
 <h3 id='table'>~ Table of Contents</h3>
@@ -833,7 +987,16 @@ sudo ETCDCTL_API=3 etcdctl --data-dir=/var/lib/from-backup snapshot restore \
             <li><a href='#essentials_cluster_arch'>Essentials</a></li>
         </ul>
     </li>
+    <li>
+        <a href='#troubleshooting'>Troubleshooting</a>
+        <ul>
+            <li><a href='#cluster_logging'>Cluster Logging</a></li>
+            <li><a href='#troubleshooting_pods'>Troubleshooting Pods</a></li>
+        </ul>
+    </li>
 </ul>
+<p><a href='#top'>↑ go to the top</a></p>
+<ul>
 
 
 </body>

@@ -287,6 +287,27 @@ $ k run build-observer --image=alpine --restart=Never --serviceaccount=build-bot
 <p>
 Or add it to the manifest under <i>`spec.serviceAccountName`</i>.
 </p>
+<p class='important'>
+ <b>vvv</b> One more important thing. <b>vvv</b>
+</p>
+<p>
+If you want to make a call to k8s api from within a pod using
+your <i>serviceaccount</i>. You will need to create a token, and then do the
+requests using the internal dns.
+</p>
+<ul>
+  <li>
+    <i> k create token SERVICE_ACCOUNT_NAME </i>
+  </li>
+  <li>
+    <p>
+        <i> k exec -it mypod -- /bin/bash</i>
+    </p>
+    <p>
+        <i> # curl -k -H "Authorization: Bearer the_token_you_just_got" https://kubernetes.default.svc/api/v1/namespaces</i>
+    </p>
+  </li>
+</ul>
 
 <h3> Roles and RoleBindings </h3>
 

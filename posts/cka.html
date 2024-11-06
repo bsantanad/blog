@@ -25,17 +25,28 @@
         h2 > a:visited {
             color: black;
         }
+
         a:visited {
             color: blue;
+        }
+
+        .important {
+            background-color: lightgray;
+            padding: 1em
+        }
+
+        .chapter {
+            font-style: italic;
+
         }
     </style>
 </head>
 <body>
 <hr>
-<h1>~ cka prep</h1>
+<h1 id='top'>~ cka prep</h1>
 <hr>
 <a href='#table'>Table of Contents</a>
-<h2 id='exam_details'><a href='#exam_details'>Exam Details</a></h2>
+<h2 class='chapter' id='exam_details'><a href='#exam_details'>1. Exam Details</a></h2>
 
 <ul>
     <li>
@@ -94,7 +105,7 @@ When killing objects you may want to not wait for it to be shut down
 gracefully, you can use <i>`--force`</i> to kill the object.
 </p>
 
-<h2 id='cluster_arch'> <a href='#cluster_arch'>Cluster Architecture, Installation and Configuration </a></h2>
+<h2 id='cluster_arch' class='chapter'> <a href='#cluster_arch'>2. Cluster Architecture, Installation and Configuration </a></h2>
 
 <p>
 Typical tasks you would expect a k8s admin to know, understanding the

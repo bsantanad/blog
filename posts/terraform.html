@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="UTF-8">
+    <title>terraform</title>
+    <style>
+        body {
+            font-family: "SF Pro Display", system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue";
+            max-width: 480px;
+            margin: 0 auto;
+            font-size: 13px;
+        }
+        pre {
+            border: 1px solid black;
+            overflow-x: auto;
+        }
+        h2 > a {
+            color: black;
+            text-decoration: none;
+        }
+        h2 > a:hover {
+            text-decoration: underline;
+        }
+        h2 > a:visited {
+            color: black;
+        }
+
+        a:visited {
+            color: blue;
+        }
+
+        .important {
+            background-color: lightgray;
+            padding: 1em
+        }
+
+        .chapter {
+            font-style: italic;
+
+        }
+    </style>
+</head>
+<body>
+<hr>
+<p class='important'>
+notes on 📖 oreilly's book: <i>Terraform: Up and Running, 3rd Edition By
+Yevgeniy Brikman</i>
+</p>
+<h1 id='top'>~ terraform</h1>
+<h2 id='why'>why terraform?</h2>
+<p>
+First, let me state that it is better so manage a big fleet of servers using
+code, you can have version control, which honestly, that seems to be reason
+enough to consider it.
+</p>
+
+<p>
+Before things like terraform, developers worked with operation teams, to deploy
+their code.  This usually was in baremetal systems, where sysadmins had to take
+care of installing dependencies, updating packages, deploying software, making
+sure all the servers had the same (similarish) configurations, among other
+stuff.
+</p>
+
+<p>
+This caused a lot of issues, since things can get messy real quickly.
+Therefore, developers came with the solution, of configuring, deploying and
+doing pretty much everything with code. This can be done multiple ways, here I
+list a few.
+</p>
+<ul>
+  <li>
+    <p>ad hoc scripts</p>
+    <ul>
+      <li>
+        You write scripts in your favorite scripting language to install
+        programs, update stuff and so on.
+      </li>
+      <li>
+        Better than doing it on the fly, but, still have some issues, for
+        example is hard to be consistent on all your scripts,  when multiple
+        developers will be working on them.
+      </li>
+    </ul>
+  </li>
+  <li>
+    <p>configuration management tools</p>
+    <ul>
+      <li>
+        Stuff like <i>`ansible`</i>, tools that are designed to manage software
+        on existing servers.
+      </li>
+      <li>
+        Improvement compared with the ad hoc scripts, since this will be way
+        more consistent, not only on your project but on multiple projects on
+        different organizations.
+      </li>
+      <li>
+        Other thing that make them a bit better than the ad hoc scripts, is
+        that you can manage multiple heards of servers this way. With the ad
+        hoc scripts you usually need to ssh to the system and run it or do
+        something similar, with ansible you can deploy software in multiple
+        servers with one command.
+      </li>
+    </ul>
+  </li>
+  <li>
+    <p>server templating tools</p>
+    <ul>
+      <li>
+        Instead of launching a bunch of servers and deploying the software with
+        the same script on each. You build an image, and create the servers
+        with this image.
+      </li>
+      <li>
+        If you need to update some package or something, you rebuild the image,
+        destroy the running server and redeploy.
+      </li>
+    </ul>
+  </li>
+  <li>
+    <p>provisioning tools</p>
+    <ul>
+      <li>
+        Here is where <b>terraform</b> comes into the picture. These tools will
+        literally create servers themselves.
+      </li>
+      <li>
+        Wait, how would they do that? Are they humans that go to a lab and
+        mount a server with their hands? No, they will talk with cloud
+        providers APIs and create the resources you need.
+      </li>
+      <li>
+        The neat part about this is that like k8s, they use the declarative
+        approach. You declare the status of your infra, and it will create it
+        like you have define it. If you have a terraform file that says we need
+        to create 10  servers with certain image, and further down the line you
+        want to add 5 more. You can change that file to say 15, and terraform
+        will take care of just having 15 servers, not 25.
+      </li>
+      <li>
+        Other cool stuff, is version control. You can have this configuration
+        files pass through a code review process.
+      </li>
+    </ul>
+  </li>
+</ul>
+<p>
+So why terraform among other tools? Well, the author of the book presents some
+good points.
+</p>
+</p>
+<ul>
+  <li>
+    <p>Domain Specific Language</p>
+    <ul>
+      <li>
+        For starters they have a Domain Specific Language. Meaning there is
+        this HCL language that you will find in all the terraform config files.
+        This is can be beneficial, since some tools use general languages like
+        python meaning you lose consistency from project to project.
+      </li>
+    </ul>
+  </li>
+  <li>
+    <p>Masterless</p>
+    <ul>
+      <li>
+        Do not need a server to keep track of the state, since the <i>"master
+        server"</i> is the Cloud Provider itself.
+      </li>
+    </ul>
+  </li>
+</ul>
+<p>
+The author make some other points, but this two are enough for me I guess.
+</p>
+
+<h2 id='using'>using terraform</h2>
+
+<h3 id='table'>~ table of contents</h3>
+<ul>
+  <li><a href='#why'>why terraform?</a></li>
+  <li><a href='#using'>using terraform</a></li>
+</ul>
+
+<p><a href='#top'>↑ go to the top</a></p>
+
+</body>
+</html>
+
+

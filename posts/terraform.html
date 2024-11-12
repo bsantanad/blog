@@ -180,6 +180,256 @@ The author make some other points, but this two are enough for me I guess.
 
 <h2 id='using'>using terraform</h2>
 
+<p>
+In the book they use aws, so we will use it here too. Knowledge is somewhat
+transferable to your cloud provider of choice, the thing is that different
+cloud providers, name stuff different, and also have different types of
+resources. For example, <a
+href='https://www.digitalocean.com/products/droplets'>digitalocean's
+droplet</a> seem to be <a href='https://aws.amazon.com/ec2/features/'>aws
+ec2</a>.
+</p>
+
+<p>
+This means that names will change and so on. So if you are using something
+different to aws, this notes might help, but you will have to refer to some
+specific declarations for your specific cloud provider.
+</p>
+
+<p>
+So create an account, give your credit card info to jeff bezos, and lets start.
+</p>
+
+<p>
+The account you just created is the root account for your aws, so you can do
+anything with it. It makes sense to create another one with less privilege for
+doing what we want in the book.
+</p>
+
+<p>
+You manage your accounts on the IAM (Identity and Access Management) panel.
+Create one and give it AdministratorAccess. Create a Access Key ID and a Secret
+Access Key. Store them somewhere safe, and export the variables in your shell.
+<pre>
+$ export AWS_ACCESS_KEY_ID=(your access key id)
+$ export AWS_SECRET_ACCESS_KEY=(your secret access key)
+</pre>
+</p>
+
+<p>
+One quick note, we will use the Default VPC for the book. A VPC is an isolated
+area of your AWS account that has its own virtual network and ip address space.
+</p>
+<p>
+Once you exported the <i>`env`</i> variables and installed terraform we can
+continue to create our first tf file.
+</p>
+<h3>Deploying a Single Server</h3>
+<p>
+You will create a <i>`.tf`</i> file. This is files are written in the DSL for
+terraform called HCL (hashicorp configuration language). It is the declarative
+language we talked about a bit before.
+</p>
+<p>
+First thing we usually do is specify the provider, so you go to the dir were
+you will have your project, and create a <i>`main.tf`</i> file with:
+<pre>
+provider "aws" {
+  region = "us-east-2"
+}
+</pre>
+</p>
+<p>
+We are telling terraform to use aws and that region.
+</p>
+<p>
+Now, the syntax  will be pretty much the same for any provider, the thing that
+will change is the types of resources you can create. Generally you will do
+something like:
+<pre>
+resource "provider_resource" "name" {
+    [config ...]
+}
+</pre>
+</p>
+<ul>
+  <li>
+    <p><b>provider</b>: this would be aws</p>
+  </li>
+  <li>
+    <p>
+      <b>resource</b>: this would the type of resource, in our case we will use
+      <i>instance</i>, which is aws lingo for ec2 instance.
+    </p>
+  </li>
+  <li>
+    <p>
+      <b>name</b>: identifier to use inside terraform. Will come handy when
+      using expressions.
+    </p>
+  </li>
+  <li>
+    <p>
+      <b>config</b>: resource specific config
+    </p>
+  </li>
+</ul>
+
+<p>
+Okay so if we want to create a ec2 instance , with a specific ami (amazon
+machine images) and with a name we will do something like:
+<pre>
+resource "aws_instance" "example" {
+    # amazon machine image to run on the ec2 instance, this is an ubuntu 20.04
+    ami = "ami-0fb653ca2d3203ac1"
+    instance_type = "t2.micro"
+    tags = {
+        Name = "terraform-example"
+    }
+}
+</pre>
+</p>
+<p>
+We use <i>t2.micro</i>, which has one virtual CPU, 1 GB of memory, and is part
+of the AWS Free Tier.
+</p>
+
+<p>
+Okay now we have our file. How do we actually deploy this on aws? Well here are
+some verbs.
+</p>
+<ul>
+  <li>
+    <p>
+      <b>terraform init</b>: this will scan the code, check which
+      providers we will be using and download the code for them. Everything is
+      put in the <i>`.terraform`</i>.
+    </p>
+  </li>
+  <li>
+    <p>
+      <b>terraform plan</b>: show you what terraform will do without actually
+      do it. Similar to a git diff on the format.
+    </p>
+  </li>
+  <li>
+    <p>
+      <b>terraform apply</b>: shows the plan and ask you to confirm it. If you
+      type <i>yes</i> it will talk with the providers and actually create the
+      stuff.
+    </p>
+  </li>
+</ul>
+<p>
+Remember terraform already knows what resources have been created. So if we
+update the resource, it will update the one we already created. Or if the
+update needs to destroy and recreate it will do that too.
+</p>
+<p>
+Last step, add this to your git repo. Here is a quick <i>`.gitignore`</i>
+<pre>
+.terraform
+*.tfstate
+*.tfstate.backup
+</pre>
+</p>
+<h3>Deploying a web server</h3>
+<p>
+So usually you would build an image with <a
+href='https://www.packer.io/'>packer</a> upload it to <i>ami</i> and tell the
+resource to use that image. Since this is a quick example, we are going to use
+a web server that comes already with ubuntu 20.04.
+</p>
+<p>
+You have the option of passing shell scripts to on the user_data config
+variable on the resource, so we will take advantage of this to tell our ubuntu
+to start the web server.
+<pre>
+resource "aws_instance" "example" {
+    # amazon machine image to run on the ec2 instance, this is an ubuntu 20.04
+    ami = "ami-0fb653ca2d3203ac1"
+    instance_type = "t2.micro"
+
+    # we would usually create an AMI for this with a real web app, using rails
+    # or smth, but this is just a simple example.
+    user_data = <<-EOF
+              #!/bin/bash
+              echo "Hello, World" > index.html
+              nohup busybox httpd -f -p 8080 &
+              EOF
+
+    user_data_replace_on_change = true
+
+    tags = {
+        Name = "terraform-example"
+    }
+}
+</pre>
+</p>
+
+<p>
+On the user_data we are sending the commands to start the server. Also note the
+<i>`user_data_replace_on_change`</i>. This tells terraform to destroy the
+instance and start it again if user data changes. Which is the case, so if now
+you run <i>terraform apply</i>, aws will show that the first resource was
+terminated and that a new one started running.
+</p>
+<p>
+<i>Ojito</i> (Spanish for pay attention), we are not going to be able to make
+an http request to the server due to  aws not allowing any incoming or outgoing
+traffic from an ec2 instance.
+</p>
+<p>
+We need to create a new resource for this called <i>`security_group`</i>. So in
+the same file we will add:
+<pre>
+resource "aws_security_group" "instance" {
+    name = "terraform-example-instance"
+
+    ingress {
+        from_port = 8080
+        to_port = 8080
+        protocol = "tcp"
+        cidr_blocks = ["0.0.0.0/0"]
+    }
+}
+</pre>
+</p>
+<p>
+This basically tells aws to accept traffic on port 8080, but we need to tell
+our ec2 instance to use this resource.
+</p>
+<p>
+So terraform has expressions, which is anything that return a value, one type
+is a <i>`reference`</i>, which allows you to access values from other parts of
+the code. For example for the security group we just created we can call it
+saying: <i>`aws_security_group.instance.id`</i>
+</p>
+<p>
+They call this <b>resource attribute reference</b> the syntax is
+<pre>
+PROVIDER_TYPE.NAME.ATTRIBUTE
+</pre>
+</p>
+<p>
+So now we need to add in our ec2 resource
+<pre>
+vpc_security_group_ids = [aws_security_group.instance.id]
+</pre>
+</p>
+<p>
+Adding this we are creating an <i>`implicit dependency`</i> meaning the order
+in which we create the stuff matters. You can render a graph for this using
+<pre>
+$ terraform graph | dot -Tsvg > output.svg
+</pre>
+</p>
+<p>
+You need to have <i>`graphviz`</i> installed though
+</p>
+
+
+
 <h3 id='table'>~ table of contents</h3>
 <ul>
   <li><a href='#why'>why terraform?</a></li>

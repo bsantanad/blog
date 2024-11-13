@@ -183,7 +183,7 @@ The author make some other points, but this two are enough for me I guess.
 <p>
 In the book they use aws, so we will use it here too. Knowledge is somewhat
 transferable to your cloud provider of choice, the thing is that different
-cloud providers, name stuff different, and also have different types of
+cloud providers name stuff different, and also have different types of
 resources. For example, <a
 href='https://www.digitalocean.com/products/droplets'>digitalocean's
 droplet</a> seem to be <a href='https://aws.amazon.com/ec2/features/'>aws
@@ -191,9 +191,9 @@ ec2</a>.
 </p>
 
 <p>
-This means that names will change and so on. So if you are using something
-different to aws, this notes might help, but you will have to refer to some
-specific declarations for your specific cloud provider.
+This means that names will change. So if you are using something different to
+aws, this notes might help, but you will have to refer to some specific
+declarations for your specific cloud provider.
 </p>
 
 <p>
@@ -208,7 +208,7 @@ doing what we want in the book.
 
 <p>
 You manage your accounts on the IAM (Identity and Access Management) panel.
-Create one and give it AdministratorAccess. Create a Access Key ID and a Secret
+Create one and give it AdministratorAccess. Create an Access Key ID and a Secret
 Access Key. Store them somewhere safe, and export the variables in your shell.
 <pre>
 $ export AWS_ACCESS_KEY_ID=(your access key id)
@@ -222,7 +222,7 @@ area of your AWS account that has its own virtual network and ip address space.
 </p>
 <p>
 Once you exported the <i>`env`</i> variables and installed terraform we can
-continue to create our first tf file.
+continue to create our first <i>`tf`</i> file.
 </p>
 <h3>Deploying a Single Server</h3>
 <p>
@@ -231,8 +231,8 @@ terraform called HCL (hashicorp configuration language). It is the declarative
 language we talked about a bit before.
 </p>
 <p>
-First thing we usually do is specify the provider, so you go to the dir were
-you will have your project, and create a <i>`main.tf`</i> file with:
+First thing we usually do is specify the provider, so you go to the directory
+where you will have your project and create a <i>`main.tf`</i> file with:
 <pre>
 provider "aws" {
   region = "us-east-2"
@@ -303,13 +303,13 @@ some verbs.
     <p>
       <b>terraform init</b>: this will scan the code, check which
       providers we will be using and download the code for them. Everything is
-      put in the <i>`.terraform`</i>.
+      put under the <i>`.terraform`</i> directory.
     </p>
   </li>
   <li>
     <p>
       <b>terraform plan</b>: show you what terraform will do without actually
-      do it. Similar to a git diff on the format.
+      doing it. Similar to a git diff on the format.
     </p>
   </li>
   <li>
@@ -341,7 +341,7 @@ resource to use that image. Since this is a quick example, we are going to use
 a web server that comes already with ubuntu 20.04.
 </p>
 <p>
-You have the option of passing shell scripts to on the user_data config
+You have the option of passing shell scripts on the <i>user_data</i> config
 variable on the resource, so we will take advantage of this to tell our ubuntu
 to start the web server.
 <pre>
@@ -428,6 +428,358 @@ $ terraform graph | dot -Tsvg > output.svg
 You need to have <i>`graphviz`</i> installed though
 </p>
 
+<h3>Variables</h3>
+
+<p>
+You may want to have variables in your configuration. Maybe a port, a token, or
+something that you want to pass around. There is the <i>`variable`</i>
+identifier for this exact reason.
+<pre>
+# hostname is the variable name
+variable "hostname" {
+    description = "something useful for you and your teammates"
+    type = "string" # this can be number, bool, list, map, set, object, tuple
+    default = "domain.do.com" # the default value if you do not pass anything
+}
+</pre>
+</p>
+
+<p>
+There are more options you have
+<ul>
+  <li>
+    <p>
+      <b>default</b>: if you do not put this, and do not send the variable in
+      the environment or in the CLI, terraform will stop and ask you to input
+      it.
+    </p>
+  </li>
+  <li>
+    <p>
+      <b>validation</b>: if you want some custom checks on the variable, so
+      enforcing min or max values.
+    </p>
+  </li>
+  <li>
+    <p>
+      <b>sensitive</b>: if this is set to true terraform will not log it when
+      you run <i>`plan`</i> or <i>`apply`</i>
+    </p>
+  </li>
+</ul>
+</p>
+
+<p>
+You can also create objects, like python's dicts or ruby hashes.
+<pre>
+variable "object_example" {
+  description = "An example of a structural type in Terraform"
+  type        = object({
+    name    = string
+    age     = number
+    tags    = list(string)
+    enabled = bool
+  })
+
+  default = {
+    name    = "value1"
+    age     = 42
+    tags    = ["a", "b", "c"]
+    enabled = true
+  }
+}
+</pre>
+</p>
+
+<p>
+Once you define it you can send the variables via de command line the
+<i>`-var`</i> flag
+<pre>
+terraform plan -var "server_port=8080"
+</pre>
+Or you could also just export the variable with the <i>`TF_VAR_name`</i>
+format. For example:
+<pre>
+$ export TF_VAR_server_port=8080
+$ terraform plan
+</pre>
+</p>
+
+<p>
+Now it is likely that you want to call it inside your file right? You can do
+that by using <i>`var.variable_name`</i>. (e.g.  <i>`var.server_port`</i>). Or
+if you want to use it inside a string, you can wrap it with
+<code>"${var.server_port}"</code>
+</p>
+
+<h4>Output Variables</h4>
+
+<p>
+There is this other type of variables that are not for using them inside your
+file, but for them to display information that was created when running the
+terraform scripts. They are good for return info useful to you, say for example
+the public  ip of an object you just created.
+
+<pre>
+output "public_ip" {
+  value = aws_instance.example.public_ip
+}
+</pre>
+<p>
+
+<p>
+When you run the <i>`terraform apply`</i> you would see it render at the end
+<pre>
+Outputs:
+
+public_ip = "1.2.3.4"
+</pre>
+You can also render them with <i>`terraform output`</i>, or more specific even
+with <i>`terraform output public_ip`</i>.
+</p>
+
+<h3>Deploying a Cluster of EC2s</h3>
+<p>
+One ec2 is great. You know what is better? a cluster of ec2's that can scale
+automatically based on the usage of the application. AWS got you covered with
+the <i>aws_autoscaling_group</i>. An Auto Scaling Group contains a collection
+of EC2 instances that are treated as a group for the purposes of scaling and
+management.
+</p>
+
+<p>
+What we are going to do is just taking one of the ec2 instances we created,
+move the definition to an <i>aws_launch_template</i>, change the name of a few
+parameters and tell the asg to use that ec2 template.
+</p>
+
+<p class='important'>
+Do note, that we are not using <i>`aws_launch_configuration`</i> like in the
+book. Seems to be deprecated, and if you try to use it aws's api will probably
+complain that you do not have permission to do that. <a
+href='https://docs.aws.amazon.com/autoscaling/ec2/userguide/launch-configurations.html'>More
+info</a>.
+</p>
+
+<p>
+The template will look something like this:
+<pre>
+resource "aws_launch_template" "example" {
+    name_prefix   = "example-"
+    image_id = "ami-0fb653ca2d3203ac1"
+    instance_type = "t2.micro"
+
+    vpc_security_group_ids = [aws_security_group.instance.id]
+
+    user_data = base64encode(<<-EOF
+              #!/bin/bash
+              echo "Hello, World" > index.html
+              nohup busybox httpd -f -p ${var.server_port} &
+              EOF
+    )
+}
+</pre>
+</p>
+<p>
+There are this things, called <i>data sources</i> which will query the cloud
+providers api and get some info, in this case we want to query it to get the
+subnet we are going to use to deploy the ec2 on.
+<pre>
+# we need to tell the asg which subnet to use, this data source  will return
+# the the default vpc in our aws account, which then we will use to query for
+# the subnets.
+data "aws_vpc" "default" {
+    default = true
+}
+
+data "aws_subnets" "default" {
+    filter {
+        name = "vpc-id"
+        values = [data.aws_vpc.default.id]
+    }
+}
+</pre>
+</p>
+
+<p>
+Mind how I am using the data source inside the other data source, that is how
+you call them: <b>data.aws_vpc.default.id</b>
+</p>
+
+<p>
+Now the actual asg definition with min size of 2 ec2s and max of 10, would look
+like this:
+<pre>
+resource "aws_autoscaling_group" "example" {
+
+    launch_template {
+        id = aws_launch_template.example.id
+        version = "$Latest" # Template version. Can be version number
+    }
+
+    # which subnet should asg use? we get this from the data sources.
+    vpc_zone_identifier = data.aws_subnets.default.ids
+
+    min_size = 2
+    max_size = 10
+
+    tag {
+        key = "Name"
+        value = "terraform-asg-example"
+        propagate_at_launch = true
+    }
+
+}
+</pre>
+</p>
+
+<p>
+So if you now do <i>`terraform apply`</i> the asg will be deployed and the ec2
+instance will be deployed. Although we still have one piece missing. We need to
+create a load balancer, if not we would have to talk directly to each ec2
+instance. It would be nice to have a piece of software that selected which ec2
+to use based on a healthcheck.
+</p>
+<p>
+Well, once again, aws got you covered. There is this resource, <i>`aws_lb`</i>
+that is a load balancer. There are different types of load balancer, different
+ones interact with different layers of the OSI model (ALB, NLB). We are going
+to use ALB which interacts with the layer 7.
+</p>
+<p>
+Need to define the ALB
+<pre>
+resource "aws_lb" "example" {
+    name = "terraform-asg-example"
+    load_balancer_type = "application"
+    subnets = data.aws_subnets.default.ids
+}
+</pre>
+</p>
+<p>
+It comes down to defining three things.
+</p>
+<ul>
+  <li>
+    <p>
+      <b>listener</b> this is where we actually tell it to which port it should
+      listen
+      <pre>
+# configure the aws_lb to listen to port 80 and use http
+resource "aws_lb_listener" "http" {
+    load_balancer_arn = aws_lb.example.arn
+    port = 80
+    protocol = "HTTP"
+
+    # send 404 to requests that do not match any listener rules.
+    default_action {
+        type = "fixed-response"
+
+        # by default, return just a 404
+        fixed_response {
+            content_type = "text/plain"
+            message_body = "404: page not found"
+            status_code  = 404
+
+        }
+    }
+}
+      </pre>
+    </p>
+  </li>
+  <li>
+    <p>
+        <b>listener rule</b> this is where we map a pattern to a  target group
+    <pre>
+resource "aws_lb_listener_rule" "asg" {
+    listener_arn = aws_lb_listener.http.arn
+    priority = 100
+
+    # match any path...
+    condition {
+        path_pattern {
+            values = ["*"]
+        }
+    }
+
+    # ...and send it to our asg group
+    action {
+        type = "forward"
+        target_group_arn = aws_lb_target_group.asg.arn
+    }
+}
+    </pre>
+      You will notice that we have not defined the target_group, we will do it
+      in the next step
+    </p>
+  </li>
+  <li>
+    <p>
+        <b>target group</b> here we define a health check for the instances.
+        Take into account we are not defining which ec2 instances to send the
+        traffic to here. Instead we are going to do it in the asg definition.
+        <pre>
+# Health checks your instances by periodically sending an HTTP request to each
+# ec2. If one becomes unhealthy will stop sending the traffic to it.
+#
+# Ojito, we are not defining which ec2 instances to send requests to
+# here. That will be done in aws_autoscaling_group using the parameter
+# aws_lb_target_group_attachment.
+resource "aws_lb_target_group" "asg" {
+  name     = "terraform-asg-example"
+  port     = var.server_port
+  protocol = "HTTP"
+  vpc_id   = data.aws_vpc.default.id
+
+  health_check {
+    path                = "/"
+    protocol            = "HTTP"
+    matcher             = "200"
+    interval            = 15
+    timeout             = 3
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+  }
+}
+        </pre>
+    </p>
+  </li>
+</ul>
+<p>
+For the full example go to <a
+href='https://github.com/bsantanad/terraform.oreilly/blob/main/ags.ec2.tf'>github
+ags.ec2.tf</a>.
+</p>
+
+<p>
+Finally add this output variable so you have the dns
+<pre>
+output "alb_dns_name" {
+    value = aws_lb.example.dns_name
+    description = "dns of the load balancer"
+}
+</pre>
+</p>
+
+<h3>Cleanup</h3>
+
+<p>
+Anyway, we do not want to have this aws resources there for the rest of
+eternity. Mostly because we already gave them our credit card. So once you
+deployed this, and tested it. We can clean everything up.
+</p>
+
+<p>
+<i>`terraform destroy`</i> will do the trick. There is no undo, but the good
+thing is that you already have it in a file so you can destroy it and apply it
+however many times you like.
+</p>
+
+<p>
+So this -- according to the book -- are the basics of terraform. Now you can go
+into the wild and start terraforming your favorite cloud provider. (Or you can
+continue reading this, if I wrote my notes on more chapters)
+</p>
 
 
 <h3 id='table'>~ table of contents</h3>

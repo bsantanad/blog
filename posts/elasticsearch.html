@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="UTF-8">
+    <title>~elastisearch</title>
+    <style>
+        body {
+            font-family: "SF Pro Display", system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue";
+            max-width: 960px;
+            margin: 0 auto;
+        }
+        h2 > a {
+            color: black;
+            text-decoration: none;
+        }
+        h2 > a:hover {
+            text-decoration: underline;
+        }
+        h2 > a:visited {
+            color: black;
+        }
+
+        a:visited {
+            color: blue;
+        }
+
+        .important {
+            background-color: lightgray;
+            padding: 1em
+        }
+
+        .chapter {
+            font-style: italic;
+
+        }
+    </style>
+</head>
+<body>
+<hr>
+<blockquote>
+notes on 📖 oreilly's book: <i>elasticsearch: the definitive guide</i>,
+unfortunately the book shows an old version of elastic, so I had to translate
+it to newer versions (7.* or 8.*).
+</blockquote>
+<h1 id='top'>~ elasticsearch</h1>
+<a href='#table'>table of contents</a>
+<h2 id='what'>elasticsearch?</h2>
+<p>
+Elasticsearch is an open source search engine. It is written in Java, it
+exposes a simple, coherent REST API that allow to do full-text search. It can
+also be described as:
+<ul>
+    <li>
+        <p>
+            A distributed real-time document store where every field is indexed
+            and searchable
+        </p>
+    </li>
+    <li>
+        <p>
+            A distributed search engine with real-time analytics.
+        </p>
+    </li>
+    <li>
+        <p>
+            Super scalable.
+        </p>
+    </li>
+</ul>
+</p>
+
+<p>
+Since it is an API you can interact with it with plain http requests, or with a
+client in your favorite programming language. If you want to do interact
+queries you can use kibana to interact with it. This is a separated software
+that you will have to install.
+</p>
+
+<p>
+If you download it and run it on your local machine you can simply do:
+<pre>
+<code>
+% curl -k -u user:password https://localhost:9200/ | jq
+% Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+Dload  Upload   Total   Spent    Left  Speed
+100   536  100   536    0     0   1307      0 --:--:-- --:--:-- --:--:--  1307
+{
+    "name": "192.168.1.4",
+    "cluster_name": "elasticsearch",
+    "cluster_uuid": "some hash",
+    "version": {
+        "number": "8.17.0",
+        "build_flavor": "default",
+        "build_type": "tar",
+        "build_hash": "2b6a7fed44faa321997703718f07ee0420804b41",
+        "build_date": "2024-12-11T12:08:05.663969764Z",
+        "build_snapshot": false,
+        "lucene_version": "9.12.0",
+        "minimum_wire_compatibility_version": "7.17.0",
+        "minimum_index_compatibility_version": "7.0.0"
+    },
+    "tagline": "You Know, for Search"
+}
+</code>
+</pre>
+You will see information for the elastic instance you have running.
+</p>
+<p>
+Now, the best way of learning is by doing so lets follow the example of the
+book and create an employee directory.
+</p>
+<h2 id='directory'>employee directory</h2>
+
+<h3>Requirements</h3>
+<p>
+We need to have an employee directory for Megacorp, as part of a new HR
+initiative.
+<ul>
+    <li>
+        <p>the data can contain multi value tags, numbers and full text</p>
+    </li>
+    <li>
+        <p>retrieve the full details of any employee</p>
+    </li>
+    <li>
+        <p>
+            allow structured search, meaning, find employees over the age of
+            30
+        </p>
+   </li>
+    <li>
+        <p>return highlighted search snippets from text matching documents</p>
+    </li>
+    <li>
+        <p>build analytics dashboards over the data</p>
+    </li>
+</ul>
+</p>
+<h3>Indexing employee documents</h3>
+<p>
+The act of storing data in elasticsearch is called <i>indexing</i>, but first
+we need to define where we are going to store it.
+</p>
+<p>
+We can draw a parallel to relational databases, which I found useful in the
+book.
+<pre>
+<code>
+    Relational DB -> Databases -> Tables -> Rows -> Columns
+    Elasticsearch -> Indices   -> Types  -> Documents -> Fields
+
+    * Correction, apparently this change on elastic 7 and  8:
+
+    Relational DB -> Databases -> Tables -> Rows    -> Columns
+    Elasticsearch -> Indices   ->    Documents   -> Fields
+</code>
+</pre>
+<p>
+Each elasticsearch cluster can contain multiple indices (databases)
+</p>
+
+<p>
+Index have a lot of meaning here, so lets break them down.
+<ul>
+    <li>
+        <p>index (noun): the parallel to database we just talked about</p>
+    </li>
+    <li>
+        <p>index (verb): store a document into an index (noun)</p>
+    </li>
+    <li>
+        <p>
+            inverted index: its what elastic uses for full-text search, think
+            of it like the index at the back of a book but more sophisticated.
+            Each unique word (term) points to all the documents containing it
+        </p>
+    </li>
+</ul>
+</p>
+
+<p>
+Okay so for our example, we will have an <i>Index</i> for employees, then each
+doc will be an employee with the employees info.
+</p>
+
+<p>
+So how would it look like to do this? We can go to the Dev Tools in the Kibana
+UI and make the request there.
+</p>
+
+<pre>
+<code>
+PUT /employees/_doc/1
+{
+    "first_name": "John",
+    "last_name": "Smith",
+    "age": 25,
+    "about": "I love to go rock climbing",
+    "interests": ["sports", "music"]
+}
+</code>
+</pre>
+
+<p>
+Do note that even though we specify the <code>_doc</code> endpoint it is the
+default one.
+</p>
+
+<p>
+The response will look something like this:
+</p>
+<pre>
+<code>
+{
+  "_index": "employees",
+  "_id": "1",
+  "_version": 1,
+  "result": "created",
+  "_shards": {
+    "total": 2,
+    "successful": 1,
+    "failed": 0
+  },
+  "_seq_no": 0,
+  "_primary_term": 1
+}
+</code>
+</pre>
+
+<p>
+What is happening in between our request and the response?
+<ol>
+    <li>
+        <p>
+            Analyze and process the document (tokenization and normalization)
+        </p>
+    </li>
+    <li>
+        <p>
+            Create data structures (inverted index, bkd trees)
+        </p>
+    </li>
+    <li>
+        <p>
+            Store in the in-memory buffer
+        </p>
+    </li>
+    <li>
+        <p>Persist to the durable filesystem</p>
+    </li>
+    <li>
+        <p>Send response to the client</p>
+    </li>
+</ol>
+</p>
+
+<p>
+I hope it is clear of course that you can store more documents following the
+same process.
+</p>
+
+<p>
+Once we added some employees we can continue to do some stuff with the data
+itself.
+</p>
+
+<h3>Search Lite</h3>
+<p>
+You use <code>GET</code>s to do the queries. If you want to get all the
+documents on an index, you can do:
+</p>
+<pre>
+<code>
+GET /employees/_search
+</code>
+</pre>
+<p>
+And we would get something like:
+</p>
+
+<pre>
+<code>
+{
+  "took": 0,
+  "timed_out": false,
+  "_shards": {
+    "total": 1,
+    "successful": 1,
+    "skipped": 0,
+    "failed": 0
+  },
+  "hits": {
+    "total": {
+      "value": 2,
+      "relation": "eq"
+    },
+    "max_score": 1,
+    "hits": [
+      {
+        "_index": "employees",
+        "_id": "1",
+        "_score": 1,
+        "_source": {
+          "first_name": "John",
+          "last_name": "Smith",
+          "age": 25,
+          "about": "I love to go rock climbing",
+          "interests": [
+            "sports",
+            "music"
+          ]
+        }
+      },
+      {
+        "_index": "employees",
+        "_id": "2",
+        "_score": 1,
+        "_source": {
+          "first_name": "Jose",
+          "last_name": "Perez",
+          "age": 29,
+          "about": "I love to go running",
+          "interests": [
+            "music",
+            "chess"
+          ]
+        }
+      }
+    ]
+  }
+}
+</pre>
+</code>
+
+<p>
+In this <i>search lite</i> you can do simple stuff, like getting all the
+documents that match a condition, or all the documents that have a word even.
+For example lets say I want to get the document for all the people that has the
+last name <i>Smith</i>
+</p>
+
+<pre>
+<code>
+GET /employees/_search?q=last_name:Smith
+</code>
+</pre>
+
+<p>
+Or I want to get all the documents where the word <i>music</i> appears.
+</p>
+
+<pre>
+<code>
+GET /employees/_search?q=music
+</code>
+</pre>
+
+<p>
+This approach is good and easy to understand but it has its limitations, some
+queries need special characters like <code>+</code>, this means that we would
+have to percent encode them. So <code>+name:john</code> would be
+<code>%2Bname%3Ajohn</code>.
+</p>
+
+<p>
+Do not get me wrong, I like percent encoding like the next guy, but it can
+become a bit cumbersome to write queries like this. Therefore we have another
+way using a DSL for Elastic.
+</p>
+
+<h3>Search with Query DSL</h3>
+
+<p>
+You will have to leave your judgement at the door, and start sending a json
+payload in a <code>GET</code> request. I know, I know, it is hard, but this is
+the way they chose to do it.
+</p>
+
+<p>
+We can recreate the last name Smith query we just listed above like this:
+</p>
+<pre>
+<code>
+GET /employees/_search
+{
+    "query": {
+        "match": {
+          "last_name": "Smith"
+        }
+    }
+}
+</code>
+</pre>
+
+<p>
+You will see the exact same result. Of course this DSL allow us to make more
+complicated stuff. Say you want all the Smith's at the company, and want to see
+if they are into rock albums.
+</p>
+
+<pre>
+<code>
+GET /employees/_search
+{
+    "query": {
+        "bool": {
+            "filter": {
+                "term": {
+                    "last_name": "smith"
+                }
+            },
+            "must":{
+                "match": {
+                    "about": "rock albums"
+                }
+            }
+        }
+    }
+}
+</code>
+</pre>
+<p>
+So let us understand what is happening here.
+</p>
+
+<h4>Understanding Query DSL</h4>
+<p>
+There are two types of queries
+<ul>
+    <li>
+        <p>
+            <b>Leaf query clauses</b>: look for a particular value on a
+            particular field
+        </p>
+    </li>
+    <li>
+        <p>
+            <b>Compound query clauses</b>: wrap other leaf or compound queries
+            and combine them in logical fashion.
+        </p>
+    </li>
+</ul>
+The above one is a compound query.
+</p>
+
+<p>
+When you make a query on elasticsearch you will see elastic will sort the
+results using a relevance score, this measures how well the document matches
+the query. The higher the score, the more relevant the document.
+</p>
+
+<p>
+Score calculation depends on several factors, one of them is if the query
+clause is run in a <b>Query</b> or a <b>Filter</b> context.
+<ul>
+    <li>
+        <p>
+            <b>Query context</b>: this context sees how well a document match
+            the query clause, and will calculate a score for it.
+        </p>
+    </li>
+    <li>
+        <p>
+            <b>Filter context</b>: this context is binary. Do you match the
+            query clause? yes or no?.
+        </p>
+    </li>
+</ul>
+Filter context has its benefits, it uses simple binary logic, has better
+performance, resource efficiency among other things.
+</p>
+
+<p>
+Now let us come back to our query.
+</p>
+
+<pre>
+<code>
+GET /employees/_search
+{
+    "query": {
+        "bool": {
+            "filter": {
+                "term": {
+                    "last_name": "smith"
+                }
+            },
+            "must":{
+                "match": {
+                    "about": "rock albums"
+                }
+            }
+        }
+    }
+}
+</code>
+</pre>
+
+<p>
+Here we are using both the filter context and the query context. For the filter
+context, we are telling elastic to return to us all the employees with
+<i>Smith</i> as the last name. Simple yes or no question.
+</p>
+<p>
+For the query context, we are telling to give us the documents where the field
+about has something about <i>rock albums</i>. But even if it does not have
+exactly <i>rock albums</i>. We still are going to get some result with a lower
+score.
+</p>
+
+<pre>
+<code>
+{
+  "took": 3,
+  "timed_out": false,
+  "_shards": {
+    "total": 1,
+    "successful": 1,
+    "skipped": 0,
+    "failed": 0
+  },
+  "hits": {
+    "total": {
+      "value": 2,
+      "relation": "eq"
+    },
+    "max_score": 1.4167401,
+    "hits": [
+      {
+        "_index": "employees",
+        "_id": "3",
+        "_score": 1.4167401,
+        "_source": {
+          "first_name": "Jane",
+          "last_name": "Smith",
+          "age": 32,
+          "about": "I like to collect rock albums",
+          "interests": [
+            "sports",
+            "music"
+          ]
+        }
+      },
+      {
+        "_index": "employees",
+        "_id": "1",
+        "_score": 0.4589591,
+        "_source": {
+          "first_name": "John",
+          "last_name": "Smith",
+          "age": 25,
+          "about": "I love to go rock climbing",
+          "interests": [
+            "sports",
+            "music"
+          ]
+        }
+      }
+    ]
+  }
+}
+</code>
+</pre>
+
+<p>
+We see that we are getting two results, both have the Smith last name, but one
+likes rock albums and the other rock climbing, the one that likes rock climbing
+has a lower score.
+</p>
+
+<h3 id='table'>~ table of contents</h3>
+<ul>
+  <li><a href='#what'>elasticsearch?</a></li>
+  <li><a href='#directory'>employee directory</a></li>
+</ul>
+
+<p><a href='#top'>↑ go to the top</a></p>
+
+</body>
+</html>
+
+

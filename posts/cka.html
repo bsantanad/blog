@@ -1,19 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <link rel="stylesheet" href="/static/water.css">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta charset="UTF-8">
     <title>cka prep</title>
+    <link rel="stylesheet" href="/static/highlight.min.css">
+    <script src="/static/highlight.min.js"></script>
+    <script>hljs.highlightAll();</script>
     <style>
         body {
             font-family: "SF Pro Display", system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue";
-            max-width: 480px;
+            max-width: 960px;
             margin: 0 auto;
-            font-size: 13px;
-        }
-        pre {
-            border: 1px solid black;
-            overflow-x: auto;
         }
         h2 > a {
             color: black;
@@ -42,6 +41,9 @@
     </style>
 </head>
 <body>
+<a href='/'>
+    < back home
+</a>
 <hr>
 <h1 id='top'>~ cka prep</h1>
 <hr>
@@ -435,6 +437,7 @@ Administrator (CKA) Study Guide.</b>
   YAML manifest for listing pods
 </p>
 <pre>
+<code>
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -449,12 +452,14 @@ rules:
   - pods
   verbs:
   - list
+</code>
 </pre>
 
 <p>
   YAML manifest for deleting svc's
 </p>
 <pre>
+<code>
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -469,12 +474,14 @@ rules:
   - services
   verbs:
   - delete
+</code>
 </pre>
 
 <p>
   YAML manifest aggregating them.
 </p>
 <pre>
+<code>
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -487,6 +494,7 @@ aggregationRule:
   - matchLabels:
       rbac-service-delete: "true"
 rules: []
+</code>
 </pre>
 
 <h2 id='creating_and_managing_k8s'><a href='#creating_and_managing_k8s'>Creating and Managing a K8s Cluset</a></h2>
@@ -519,23 +527,29 @@ some steps:
   <li>
     On master run
     <pre>
+<code>
 sudo kubeadm init --pod-network-cidr 172.18.0.0/16
+</code>
     </pre>
   </li>
   <li>
     Check all the logs that were printed. From there you can copy the snippet
     on getting your kubeconfig file.
     <pre>
+<code>
 mkdir -p $HOME/.kube
 sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
 sudo chown $(id -u):$(id -g) $HOME/.kube/config
+</code>
     </pre>
   </li>
   <li>
     Keep reading the logs, from there you will also be able to get, the command to join the workers.
     <pre>
+<code>
 kubeadm join "some_ip" --token some_token \
   --discovery-token-ca-cert-hash some:cert
+</code>
     </pre>
   </li>
   <li>
@@ -613,12 +627,15 @@ kubeadm join "some_ip" --token some_token \
             manager.
         </p>
         <pre>
+<code>
 sudo apt-get install -y kubeadm=1.19.0-00
+</code>
         </pre>
     </li>
     <li>
         <p>Check which versions are available to upgrade to</p>
         <pre>
+<code>
 $ sudo kubeadm upgrade plan
 ...
 [upgrade] Fetching available versions to upgrade to
@@ -635,6 +652,7 @@ You can now apply the upgrade by executing the following command:
 
 Note: Before you can perform this upgrade, you have to update kubeadm to v1.19.12.
 ...
+</code>
         </pre>
     </li>
     <li>
@@ -648,7 +666,9 @@ Note: Before you can perform this upgrade, you have to update kubeadm to v1.19.1
             to prevent new pods from arriving.
         </p>
         <pre>
+<code>
 kubectl drain kube-control-plane --ignore-daemonsets
+</code>
         </pre>
 
     </li>
@@ -686,13 +706,17 @@ kubectl drain kube-control-plane --ignore-daemonsets
     <li>
         <p>upgrade the node using <i>kubeadm</i></p>
         <pre>
+<code>
 sudo kubeadm upgrade node
+</code>
         </pre>
     </li>
     <li>
         <p>we need to <u>drain</u> (make it unscheduable) the node.</p>
         <pre>
+<code>
 kubectl drain worker-node --ignore-daemonsets
+</code>
         </pre>
     </li>
     <li>
@@ -751,18 +775,22 @@ We will use the <i>etcdctl</i> tool to do this.:
             <i>ca.crt</i>.
         </p>
         <pre>
+<code>
 $ sudo ETCDCTL_API=3 etcdctl
   --cacert=<trusted-ca-file> --cert=<cert-file> --key=<key-file> \
   snapshot save <backup-file-location>
+</code>
         </pre>
         <p>
             It would look something like this:
         </p>
         <pre>
+<code>
 sudo ETCDCTL_API=3 etcdctl --cacert=/etc/kubernetes/pki/etcd/ca.crt \
   --cert=/etc/kubernetes/pki/etcd/server.crt \
   --key=/etc/kubernetes/pki/etcd/server.key \
   snapshot save /opt/etcd-backup.db
+</code>
         </pre>
     </li>
     <li>
@@ -777,8 +805,10 @@ sudo ETCDCTL_API=3 etcdctl --cacert=/etc/kubernetes/pki/etcd/ca.crt \
     <li>
         <p>run the <i>`snapshot restore`</i> command</p>
         <pre>
+<code>
 sudo ETCDCTL_API=3 etcdctl --data-dir=/var/lib/from-backup snapshot restore \
   /opt/etcd-backup.db
+</code>
         </pre>
     </li>
     <li>

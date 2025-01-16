@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="/static/water.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="UTF-8">
+    <title>~sinatra</title>
+    <link rel="stylesheet" href="/static/highlight.min.css">
+    <script src="/static/highlight.min.js"></script>
+    <script>hljs.highlightAll();</script>
+    <style>
+        body {
+            font-family: "SF Pro Display", system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue";
+            max-width: 960px;
+            margin: 0 auto;
+        }
+        h2 > a {
+            color: black;
+            text-decoration: none;
+        }
+        h2 > a:hover {
+            text-decoration: underline;
+        }
+        h2 > a:visited {
+            color: black;
+        }
+
+        a:visited {
+            color: blue;
+        }
+
+        .important {
+            background-color: lightgray;
+            padding: 1em
+        }
+
+        .chapter {
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+<a href='/'>
+     back home
+</a>
+<hr>
+<blockquote>
+📚 notes on the book:
+<i>Sinatra: Up and Running Alan Harris, Konstantin Haase</i>
+Everything you read here is taking from there.
+</blockquote>
+
+<h1 id='top'>The <i style='font-weight: lighter;'>Entrañas</i> of Sinatra</h1>
+<p>
+Routes in sintara, like <code>get '/home'</code> are not method definitions. They are
+calls to methods deeper in the sinatra code base that receive the block of what
+the route is supposed to do.
+</p>
+
+<p>
+The funny thing is that blocks in ruby are supposed to have the same variables,
+and methods the defining scope has. Meaning you can do something like this:
+</p>
+
+<pre>
+<code>
+numbers = [1, 4, 5, 6]
+other = 'smth'
+
+numbers.each do |number|
+    puts other # you can access the variable defined in the scope above
+    puts number + 1
+end
+</code>
+</pre>
+
+<p>
+Opposed to that if you try to access params outside of a route block, it does
+not let you.
+</p>
+<pre>
+<code>
+require 'sinatra'
+
+get '/' do
+  params
+end
+
+puts params # it will not run, since this is not defined.
+</code>
+</pre>
+
+<p>
+But why is that? Well the secret is on how Sinatra manges <code>self</code>.
+</p>
+
+<p>
+In Ruby all method calls that are not sent to a variable are sent to <code>self</code>.
+Therefore if you say <code>puts</code> is the same as saying <code>self.puts</code>.
+</p>
+
+<p>
+The thing is <code>self</code> will change when you cross a "scope gate". Basically these
+are sections of code where the context changes, like class definitions, module
+definitions, methods, and so on.
+</p>
+
+<p>
+When you enter the <code>get '/home' do</code> we are changing the context, and self
+becomes different.
+</p>
+
+<pre>
+<code>
+require 'sinatra'
+
+outer_self = self
+
+get '/' do
+  content_type :txt
+  "outer self #{outer_self}, inner self: #{self}"
+end
+</code>
+</pre>
+The response is this:
+<pre>
+<code>
+outer self main, inner self: #<Sinatra::Application:0x000000011c8e71d8>
+</code>
+</pre>
+
+<p>
+Note how self inside the block is pointing to Sinatra::Application.
+</p>
+
+<p>
+So where is <code>get</code> defined? It is defined in two places, one is in Object, and
+the other one is in Sinatra::Base. Sinatra does this to be able to use this
+clean DSL where you just type <code>get</code> and ruby knows what to do.
+</p>
+
+<p>
+But it is not defined in the actual code of Object since that would pollute it.
+Instead it uses a thing called mixins. There is a Sinatra::Delegator mixin,
+that is "defining" the method in Object. From there Object will send the call
+to Sinatra::Application who would finially call Sinatra:Base for the actual
+implementation.
+</p>
+
+<pre>
+<code>
+Object (with Delegator mixin) -> Sinatra::Application -> Sinatra::Base
+# forwards the call           -> inherits from         -> has implementation
+</code>
+</pre>
+
+<p>
+All this to say that we can skip the DSL thing, and just require 'sinatra/base'
+in case we want to do modular applications or something that the Sinatra DSL
+does not natively do.
+</p>
+
+<h2 id='what'>Helpers and Extensions</h2>
+<p>
+We can extend the DSL of Sinatra with extension, these are mostly used for
+configuration and routing.
+</p>
+
+<p>
+Here is an example of an extension for a method that accepts both post and get
+requests. The project, looks something similar to this:
+</p>
+<pre>
+<code>
+.
+├── extensions.rb
+└── sinatra
+    └── post_get.rb
+</code>
+</pre>
+
+
+<p>
+post_get.rb
+</p>
+<pre>
+<code>
+require 'sinatra/base'
+
+module Sinatra
+  module PostGet
+    def post_get(route, &block)
+      get(route, &block)
+      post(route, &block)
+    end
+  end
+
+  # registering it in Sinatra::Base
+  register PostGet
+end
+</code>
+</pre>
+
+<p>
+Now inside the extensions.rb, we can use post_get as if it were defined in the
+delegator. Meaning as if it were a built-in native.
+</p>
+<pre>
+<code>
+% cat extensions.rb
+require 'sinatra'
+require './sinatra/post_get'
+
+post_get '/' do
+  "hi #{params[:name]}"
+end
+</code>
+</pre>
+
+<p>
+This approach excels for low-level routing and configuration requirements.
+</p>
+
+<p>
+We also have helpers. They play different role from extensions, they are
+available in the route block and in the views. Here is an archetypical example
+</p>
+
+<pre>
+<code>
+.
+├── helpers.rb
+└── sinatra
+    ├── link_helper.rb
+</code>
+</pre>
+
+<p>
+link_helper.rb
+</p>
+<pre>
+<code>
+require 'sinatra/base'
+
+module Sinatra
+  module LinkHelper
+    def link(name)
+      case name
+        when :about then '/about'
+        when :index then '/index'
+        else "/page/#{name}"
+      end
+    end
+  end
+
+  helpers LinkHelper # note we use helpers instead of register
+end
+</code>
+</pre>
+
+<p>
+helpers.rb
+</p>
+<pre>
+<code>
+require 'sinatra'
+require './sinatra/link_helper'
+
+get '/' do
+  erb :index
+end
+
+__END__
+
+@index
+&lt;html&gt;
+&lt;head&gt;
+  &lt;title&gt;Link Helper Test&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;nav&gt;
+    &lt;ul&gt;
+      &lt;li&gt;&lt;a href="&lt;%= link(:index) %&gt;"&gt;Index&lt;/a&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;a href="&lt;%= link(:about) %&gt;"&gt;About&lt;/a&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;a href="&lt;%= link(:random) %&gt;"&gt;Random&lt;/a&gt;&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/nav&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</code>
+</pre>
+
+<p>
+As stated above, we can use :index, :about inside the view.
+</p>
+
+<p>
+You can also put the helpers in a single file to avoid creating unnecessary
+modules.
+</p>
+<pre>
+<code>
+require 'sinatra'
+helpers do
+  def link(name)
+    case name
+    when :about then '/about'
+    when :index then '/index'
+    else "/page/#{name}"
+  end
+end
+
+get '/' do
+  erb :index
+end
+
+get '/index.html' do
+  redirect link(:index)
+end
+
+__END__
+
+@@index
+&lt;a href="&lt;%= link :about %&gt;"&gt;about&lt;/a&gt;
+</code>
+</pre>
+
+<h2> Combining Helpers and Extensions </h2>
+
+<p>
+You can create a module with your extension, and create a module inside that
+one with the helpers, then call a function <code>registered</code> that takes <code>app</code> as a
+param and add the helpers there.
+</p>
+
+<pre>
+<code>
+require 'sinatra/base'
+module MyExtension
+  module Helpers
+    # helper methods go here
+  end
+
+  # extension methods go here
+
+  def self.registered(app)
+    app.helpers Helpers
+  end
+end
+
+Sinatra.register MyExtension
+</code>
+</pre>
+
+<h2> Request and Response </h2>
+
+<p>
+Sinatra (and many other ruby web frameworks) uses Rack. This is a protocol that
+tells how an HTTP server interfaces with an application object.
+</p>
+
+<p>
+Inside Rack you can define the application object, this need to have a <code>call</code>
+method that receives one parameter. The parameter (<code>env</code>) is a <code>Hash</code> that
+contains the info of the request. You then need to return an array with 3
+things, the response code, the headers, and the body.
+</p>
+
+<p>
+Sinatra wraps this <code>env</code> in the request object. Sinatra calls this
+"applications" middleware. You can stack them up and have different middleware
+do different stuff to the request, since they can modify it, or even stop it.
+</p>
+
+<p>
+The thing about Sinatra is that it can act as one of this middleware. You can
+stack multiple apps together, have one app handle some routes and other other
+ones.
+</p>
+
+</body>
+</html>

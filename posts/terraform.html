@@ -1,19 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <link rel="stylesheet" href="/static/water.css">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta charset="UTF-8">
     <title>terraform</title>
+    <link rel="stylesheet" href="/static/highlight.min.css">
+    <script src="/static/highlight.min.js"></script>
+    <script>hljs.highlightAll();</script>
     <style>
         body {
             font-family: "SF Pro Display", system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue";
-            max-width: 480px;
+            max-width: 960px;
             margin: 0 auto;
-            font-size: 13px;
-        }
-        pre {
-            border: 1px solid black;
-            overflow-x: auto;
         }
         h2 > a {
             color: black;
@@ -42,11 +41,14 @@
     </style>
 </head>
 <body>
+<a href='/'>
+    < back home
+</a>
 <hr>
-<p class='important'>
+<blockquote>
 notes on 📖 oreilly's book: <i>Terraform: Up and Running, 3rd Edition By
 Yevgeniy Brikman</i>
-</p>
+</blockquote>
 <h1 id='top'>~ terraform</h1>
 <a href='#table'>table of contents</a>
 <h2 id='why'>why terraform?</h2>
@@ -211,8 +213,10 @@ You manage your accounts on the IAM (Identity and Access Management) panel.
 Create one and give it AdministratorAccess. Create an Access Key ID and a Secret
 Access Key. Store them somewhere safe, and export the variables in your shell.
 <pre>
+<code>
 $ export AWS_ACCESS_KEY_ID=(your access key id)
 $ export AWS_SECRET_ACCESS_KEY=(your secret access key)
+</code>
 </pre>
 </p>
 
@@ -234,9 +238,11 @@ language we talked about a bit before.
 First thing we usually do is specify the provider, so you go to the directory
 where you will have your project and create a <i>`main.tf`</i> file with:
 <pre>
+<code>
 provider "aws" {
   region = "us-east-2"
 }
+</code>
 </pre>
 </p>
 <p>
@@ -247,9 +253,11 @@ Now, the syntax  will be pretty much the same for any provider, the thing that
 will change is the types of resources you can create. Generally you will do
 something like:
 <pre>
+<code>
 resource "provider_resource" "name" {
     [config ...]
 }
+</code>
 </pre>
 </p>
 <ul>
@@ -279,6 +287,7 @@ resource "provider_resource" "name" {
 Okay so if we want to create a ec2 instance , with a specific ami (amazon
 machine images) and with a name we will do something like:
 <pre>
+<code>
 resource "aws_instance" "example" {
     # amazon machine image to run on the ec2 instance, this is an ubuntu 20.04
     ami = "ami-0fb653ca2d3203ac1"
@@ -287,6 +296,7 @@ resource "aws_instance" "example" {
         Name = "terraform-example"
     }
 }
+</code>
 </pre>
 </p>
 <p>
@@ -328,9 +338,11 @@ update needs to destroy and recreate it will do that too.
 <p>
 Last step, add this to your git repo. Here is a quick <i>`.gitignore`</i>
 <pre>
+<code>
 .terraform
 *.tfstate
 *.tfstate.backup
+</code>
 </pre>
 </p>
 <h3>Deploying a web server</h3>
@@ -345,6 +357,7 @@ You have the option of passing shell scripts on the <i>user_data</i> config
 variable on the resource, so we will take advantage of this to tell our ubuntu
 to start the web server.
 <pre>
+<code>
 resource "aws_instance" "example" {
     # amazon machine image to run on the ec2 instance, this is an ubuntu 20.04
     ami = "ami-0fb653ca2d3203ac1"
@@ -364,6 +377,7 @@ resource "aws_instance" "example" {
         Name = "terraform-example"
     }
 }
+</code>
 </pre>
 </p>
 
@@ -383,6 +397,7 @@ traffic from an ec2 instance.
 We need to create a new resource for this called <i>`security_group`</i>. So in
 the same file we will add:
 <pre>
+</code>
 resource "aws_security_group" "instance" {
     name = "terraform-example-instance"
 
@@ -393,6 +408,7 @@ resource "aws_security_group" "instance" {
         cidr_blocks = ["0.0.0.0/0"]
     }
 }
+</code>
 </pre>
 </p>
 <p>
@@ -408,20 +424,26 @@ saying: <i>`aws_security_group.instance.id`</i>
 <p>
 They call this <b>resource attribute reference</b> the syntax is
 <pre>
+<code>
 PROVIDER_TYPE.NAME.ATTRIBUTE
+</code>
 </pre>
 </p>
 <p>
 So now we need to add in our ec2 resource
 <pre>
+<code>
 vpc_security_group_ids = [aws_security_group.instance.id]
+</code>
 </pre>
 </p>
 <p>
 Adding this we are creating an <i>`implicit dependency`</i> meaning the order
 in which we create the stuff matters. You can render a graph for this using
 <pre>
+<code>
 $ terraform graph | dot -Tsvg > output.svg
+</code>
 </pre>
 </p>
 <p>
@@ -435,12 +457,14 @@ You may want to have variables in your configuration. Maybe a port, a token, or
 something that you want to pass around. There is the <i>`variable`</i>
 identifier for this exact reason.
 <pre>
+<code>
 # hostname is the variable name
 variable "hostname" {
     description = "something useful for you and your teammates"
     type = "string" # this can be number, bool, list, map, set, object, tuple
     default = "domain.do.com" # the default value if you do not pass anything
 }
+</code>
 </pre>
 </p>
 
@@ -472,6 +496,7 @@ There are more options you have
 <p>
 You can also create objects, like python's dicts or ruby hashes.
 <pre>
+<code>
 variable "object_example" {
   description = "An example of a structural type in Terraform"
   type        = object({
@@ -488,6 +513,7 @@ variable "object_example" {
     enabled = true
   }
 }
+</code>
 </pre>
 </p>
 
@@ -495,13 +521,17 @@ variable "object_example" {
 Once you define it you can send the variables via de command line the
 <i>`-var`</i> flag
 <pre>
+<code>
 terraform plan -var "server_port=8080"
+</code>
 </pre>
 Or you could also just export the variable with the <i>`TF_VAR_name`</i>
 format. For example:
 <pre>
+<code>
 $ export TF_VAR_server_port=8080
 $ terraform plan
+</code>
 </pre>
 </p>
 
@@ -521,18 +551,22 @@ terraform scripts. They are good for return info useful to you, say for example
 the public  ip of an object you just created.
 
 <pre>
+<code>
 output "public_ip" {
   value = aws_instance.example.public_ip
 }
+</code>
 </pre>
 <p>
 
 <p>
 When you run the <i>`terraform apply`</i> you would see it render at the end
 <pre>
+<code>
 Outputs:
 
 public_ip = "1.2.3.4"
+</code>
 </pre>
 You can also render them with <i>`terraform output`</i>, or more specific even
 with <i>`terraform output public_ip`</i>.
@@ -564,6 +598,7 @@ info</a>.
 <p>
 The template will look something like this:
 <pre>
+<code>
 resource "aws_launch_template" "example" {
     name_prefix   = "example-"
     image_id = "ami-0fb653ca2d3203ac1"
@@ -578,6 +613,7 @@ resource "aws_launch_template" "example" {
               EOF
     )
 }
+</code>
 </pre>
 </p>
 <p>
@@ -585,6 +621,7 @@ There are this things, called <i>data sources</i> which will query the cloud
 providers api and get some info, in this case we want to query it to get the
 subnet we are going to use to deploy the ec2 on.
 <pre>
+<code>
 # we need to tell the asg which subnet to use, this data source  will return
 # the the default vpc in our aws account, which then we will use to query for
 # the subnets.
@@ -598,6 +635,7 @@ data "aws_subnets" "default" {
         values = [data.aws_vpc.default.id]
     }
 }
+</code>
 </pre>
 </p>
 
@@ -610,6 +648,7 @@ you call them: <b>data.aws_vpc.default.id</b>
 Now the actual asg definition with min size of 2 ec2s and max of 10, would look
 like this:
 <pre>
+<code>
 resource "aws_autoscaling_group" "example" {
 
     launch_template {
@@ -630,6 +669,7 @@ resource "aws_autoscaling_group" "example" {
     }
 
 }
+</code>
 </pre>
 </p>
 
@@ -649,11 +689,13 @@ to use ALB which interacts with the layer 7.
 <p>
 Need to define the ALB
 <pre>
+<code>
 resource "aws_lb" "example" {
     name = "terraform-asg-example"
     load_balancer_type = "application"
     subnets = data.aws_subnets.default.ids
 }
+</code>
 </pre>
 </p>
 <p>
@@ -665,6 +707,7 @@ It comes down to defining three things.
       <b>listener</b> this is where we actually tell it to which port it should
       listen
       <pre>
+<code>
 # configure the aws_lb to listen to port 80 and use http
 resource "aws_lb_listener" "http" {
     load_balancer_arn = aws_lb.example.arn
@@ -684,6 +727,7 @@ resource "aws_lb_listener" "http" {
         }
     }
 }
+</code>
       </pre>
     </p>
   </li>
@@ -691,6 +735,7 @@ resource "aws_lb_listener" "http" {
     <p>
         <b>listener rule</b> this is where we map a pattern to a  target group
     <pre>
+    <code>
 resource "aws_lb_listener_rule" "asg" {
     listener_arn = aws_lb_listener.http.arn
     priority = 100
@@ -708,6 +753,7 @@ resource "aws_lb_listener_rule" "asg" {
         target_group_arn = aws_lb_target_group.asg.arn
     }
 }
+    </code>
     </pre>
       You will notice that we have not defined the target_group, we will do it
       in the next step
@@ -719,6 +765,7 @@ resource "aws_lb_listener_rule" "asg" {
         Take into account we are not defining which ec2 instances to send the
         traffic to here. Instead we are going to do it in the asg definition.
         <pre>
+        <code>
 # Health checks your instances by periodically sending an HTTP request to each
 # ec2. If one becomes unhealthy will stop sending the traffic to it.
 #
@@ -741,6 +788,7 @@ resource "aws_lb_target_group" "asg" {
     unhealthy_threshold = 2
   }
 }
+        </code>
         </pre>
     </p>
   </li>
@@ -754,10 +802,12 @@ asg.ec2.tf</a>.
 <p>
 Finally add this output variable so you have the dns
 <pre>
+<code>
 output "alb_dns_name" {
     value = aws_lb.example.dns_name
     description = "dns of the load balancer"
 }
+</code>
 </pre>
 </p>
 

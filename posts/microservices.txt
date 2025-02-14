@@ -1,0 +1,90 @@
+===============================
+The Principles of Microservices
+===============================
+by sam newman
+notes by benjamin santana
+
+
+What are Microservices
+======================
+
+Small autonomous services that work well together.
+
+Emphasis on the autonomous. We are talking about independent
+processes, they communicate via APIs. You know you are making a good
+system when you can take a microservices, change it and redeploy it
+without having to touch anything else.
+
+Each microservice only focus on doing one thing right.
+
+
+Service Oriented Architecture? SOA?
+-----------------------------------
+Microservices are just an opinionated way of doing SOA. Microservice
+would be a very good implementation of SOA.
+
+Size?
+-----
+My microservice should only be focus on doing one thing, and one thing well.
+
+
+Summary
+-------
+
+Independent processes communicating over APIs focusing on doing one thing, and
+one thing well, that allow for independent change.
+
+
+Benefits of Microservices
+=========================
+
+Team organization
+-----------------
+
+Allow you to align your organization to your architecture. Usually when you
+have a big code base you are usually fighting for the code base, who can check
+in now, and it is common to step into each other toes.
+
+You can align ownership of different services to independent teams. The
+communication between teams matches the communication with the API's of the
+different microservices.
+
+Conway:
+> Any organization that designs a system will produce a design whose structure
+> is a copy of the organization's communication structure.
+
+
+Ship Faster and Safer
+---------------------
+
+Say we have a one line change in a monolith. You want to deploy it, first you
+have to run a full set of tests, since you are not sure if this affects
+something you did not touch you have to run the whole suite, that takes time.
+
+Now you want to deploy it, but deploying it is a big task, you have to deploy
+the whole thing. This makes teams less prone to deploy so they deploy less with
+more changes, making stuff more prone to fail changes, making stuff more prone
+to fail.
+
+
+Security Concerns
+-----------------
+
+In a monolith you have one big wall that protects the whole application. In
+microservices you can focus on more sensitive services scrutinize and
+secure them the most.
+
+Maybe we want to secure the whole app the same, but with microservices you have
+that flexibility.
+
+
+Adopt Technologies More Easily
+------------------------------
+
+Each microservice is independent, so as long as we expose the same API we have
+the freedom of using different/multiple technologies.
+
+Embrace Uncertainty on a Digital Age
+------------------------------------
+
+With finer grain APIs we have more opportunity to adapt.

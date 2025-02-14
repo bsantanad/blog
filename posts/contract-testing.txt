@@ -150,3 +150,61 @@ How to introduce it
 - add contract testing to your ci/cd
 
 
+
+==================
+Technical overview
+==================
+
+Before writing contract test code you must start a conversation with the key
+stakeholders regarding where to store the contracts.
+
+There are two approaches to contract testing:
+- consumer-driven contract testing (traditional approach)
+- provider-driven contract testing
+
+Usual approach for integration testing. The API service team implements the
+tests during the dev process. Once the tests are passed the api is deployed to
+an integration env so other teams can check if their integration will work
+successfully.
+
+The short-comings with this approach are:
+- env setup and maintenance problems
+- bad seed data
+- env not reliable
+
+One option is to containerize the integration environment, and spin it up
+on-demand using something like Docker.
+
+Other option is to set up a full integration environment, this would be closer
+to prod, but it is also harder to maintain
+
+Contract testing reduces the effort required compared with the first option and
+simulates the integration environment, but also gives the confidence for the
+second option.
+
+Consumer
+--------
+
+A consumer is a user of a product or service. Anything that makes a request to
+another service whether to retrieve data, post and update, or consume an event.
+
+Usually this is the one that drives the contract, in a front end app, the user
+do not care how the data is formatted from the server. The server needs to
+comply with the reqs of the client. This is why the consumer creates the
+contract.
+
+Provider
+--------
+
+Makes a service available to someone who needs it. A service returning the
+relevant data.
+
+Contract
+--------
+
+A contract is a JSON object that has consumer and provider interactions,
+outlining a requests details and expected response data.
+
+It is different with a _schema_. An _schema_ provides the outline, facilitates
+describing the json's structure, rules and constrains. But the difference is
+that a schema does not tell how consumers use the data.

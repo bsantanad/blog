@@ -1,0 +1,107 @@
+Notes on ch07 of GitOps Cookbook by Natale Vinto, Alex Soto Bueno
+======
+argocd
+======
+
+How to deploy a application to an k8s cluster using the GitOps methodology and
+not creating scripts that manually run `kubectl/helm` commands?
+
+We want ArgoCD to deploy and application defined in a Git Repository.
+
+1. Create an Application resource to set up Argo CD.
+
+Install argocd
+```
+k apply -n argocd \
+    -f https://raw.githubusercontent.com/argoproj/argo-cd/v2.3.4/manifests/install.yaml
+```
+
+You can port-forward the `svc/argocd-server` to get a ui in your browser. Now
+you initial user is `admin`,  the password is in a secret in the
+`argocd-initial-admin-secret` secret in the cluster.
+
+```
+k -n argocd get secret argocd-initial-admin-secret -o yaml | grep password | awk  '{print $2}'
+```
+pipe it to
+```
+base64 -d
+```
+
+
+To install the cli, just `brew` install it and login
+```
+argocd login --insecure --grpc-web localhost:9090 --username admin --password some-pass
+```
+
+
+Create Application
+------------------
+
+Now say we have an app in a repository. That has a deploy, svc and ns.
+I created the repo: https://github.com/bsantanad/argocd-learn.git
+
+We are going to create an application object to tell argocd about it.
+
+```
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: app
+  namespace: argocd
+spec:
+  destination: # target cluster
+    namespace: app
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    repoURL: https://github.com/bsantanad/argocd-learn.git
+    path: app
+    targetRevision: main
+```
+
+Now if we just apply the manifest.
+
+```
+k apply -f application.yaml
+```
+
+We can query argocd cli about it or check the ui
+```
+% argocd app list
+NAME        CLUSTER                         NAMESPACE  PROJECT  STATUS     HEALTH   SYNCPOLICY  CONDITIONS  REPO                                           PATH  TARGET
+argocd/app  https://kubernetes.default.svc  app        default  OutOfSync  Missing  Manual      <none>      https://github.com/bsantanad/argocd-learn.git  app   main
+```
+
+It says it is `OutofSync`, which means that the app is registered, and there is
+a different status on what is currently in the cluster, and what is in Git.
+
+Let us sync it then.
+```
+argocd app sync app
+```
+ % argocd app list
+NAME        CLUSTER                         NAMESPACE  PROJECT  STATUS  HEALTH   SYNCPOLICY  CONDITIONS  REPO                                           PATH  TARGET
+argocd/app  https://kubernetes.default.svc  app        default  Synced  Healthy  Manual      <none>      https://github.com/bsantanad/argocd-learn.git  app   main
+```
+
+If we check the status of the objects in the cluster, everything looks alright:
+```
+% k get pods -n bgd
+NAME                   READY   STATUS    RESTARTS   AGE
+bgd-7984d6f558-tts8g   1/1     Running   0          89s
+% k get svc -n bgd
+NAME   TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)    AGE
+bgd    ClusterIP   10.96.146.60   <none>        8080/TCP   93s
+```
+
+Now if we open this with a browser you will see blue dots. Now the cool part,
+go edit the deploy and change the color to green, push the changes, and see
+what happens.
+
+It will say it is out of sync, now just sync it again and `voila`
+
+Automatic Sync
+--------------
+
+TODO

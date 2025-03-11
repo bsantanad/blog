@@ -1,0 +1,83 @@
+==============================================
+notes on oreilly's learning opentelemetry book
+==============================================
+
+Introduction
+------------
+
+позволь мне steal the quote with which the first chapter starts.
+
+> History is not the past but a map of the past, drawn from a particular point of
+> view, to be useful to the modern traveler.
+> Henry Glassie, Historian
+
+cool stuff, now, давайте начнем.
+
+Engineers nowadays have to identify and mitigate issues on their applications
+before there is a meltdown, meaning we cannot just wait for the system to fail
+and do a postmortem. That is why it is important to have the data we need to
+know when this is going to happen.
+
+The data needs to be 'correlated' organized, ready to be analyzed by computers.
+OpenTelemetry does this. It turns individual logs, metrics and traces into an
+understandable graph of information.
+
+Terms for Observability.
+------------------------
+
+In the book they focus on observability of distributed systems. They define a
+*distributed system* as:
+
+> A system whose components are located on different networked computers that
+> communicate and coordinate their actions by passing messages to on another.
+
+Meaning that not only your microservice app, is a distributed system but your
+monolith that talks to an API to get the weather or something.
+
+There are two components for distributed systems (at a high level of course):
+
+- Resources
+    Physical (servers, ram, cpu, nics) and logical (api endpoints, dbs).
+    Basically everything that constructs the system.
+- Transactions
+    Requests that orchestrate the resource to achieve something, usually done
+    by the user. (booking a flight, loading a website)
+
+
+So how do we observe a distributed system. Well, it needs to emit _telemetry_.
+Telemetry is data that describes what your system is doing or what is happening
+inside it. Without this the system is a black box.
+
+There are two types of telemetry.
+
+- User telemetry:
+    how the user interacts with a system. How long did he/she hovered over the
+    "buy now" button.
+
+- Performance telemetry:
+    statistics about how the system components are behaving. How long it took
+    for the button to load.
+
+Behind telemetry are different types of signals, tbh I did not fully get this
+part, but I think that a signal could be a logging in the application, another
+one the cpu usage of the system and so on.
+
+Each signal now has two parts (feel overloaded with terms already?)
+
+1. Instrumentation: code that emits the data
+2. Transmission system: responsible for sending the data over the network, to
+   an analysis tool.
+
+
+It is important to mention that the system that emits the data and the system
+that analyzes the data are separate from each other.
+
+Telemetry is the data itself. Analysis is what you do with the data.
+
+Telemetry plus Analysis equals observability
+
+
+A Brief History of Telemetry
+----------------------------
+
+to be continued...

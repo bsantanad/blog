@@ -1,0 +1,111 @@
+========================
+Certified k8s Admin Prep
+========================
+
+Sections
+========
+
+- 25% cluster architecture, installation and configuration
+- 15% workloads and scheduling
+- 20% servicing and networking
+- 10% storage
+- 30% troubleshooting
+
+
+K8s in a Nutshell
+=================
+
+K8s is a container orchestration tool. Today there are a lot of microservices
+architectures. We can have a container per service and managing all those
+containers can be hard. K8s takes care of teh scalability, security,
+persistence and load balancing.
+
+When k8s is triggered to create a container, it will delegate it to the
+container runtime engine via a CRI (container runtime interface)
+
+Features
+--------
+
+- Declarative Model
+  - the cool thing about k8s, is that you just tell it the status of the
+    cluster you want, via yamls, and it will do its best to create it.
+- Autoscaling
+  - k8s can also automatically (or manually) scale resources when needed.
+- Application management 
+  - When deploying new versions for your application, you can use k8s to manage
+    the roll out technique. As well as come back to previous rollouts
+- Persistent Storage
+  - Containers are ephemeral, meaning the filesystem in them will die with
+    them. With k8s you can have persistent volumes, to manage storage across
+    containers.
+- Networking
+  - k8s has internal and external load balancing for network traffic.
+
+
+High-Level Architecture
+-----------------------
+
+There are two types of nodes (these can be vm, baremetal machines, whatever you
+call a computer), two types of nodes:
+
+- control plane nodes
+  - this node exposes k8s API thru a server. Whenever you do `kubectl
+    something` you are talking to this API.
+- worker nodes
+  - this are the nodes that execute the workload in containers manged by pods.
+  - worth to say that every worker node needs a container runtime engine, to
+    create the containers.
+
+
+Control Plane Nodes
+-------------------
+
+These have different components to do their job:
+* API Server 
+  - Exposes the k8s api to clients (kubectl)
+  - Here is where the authentication, authorization and admission control also
+    happens.
+* Scheduler
+  - Background process that watches for new k8s pods with no assigned and look
+    for a node to execute them.
+* Control Manager
+  - Watches the state of your clusters and implements changes where needed.
+  - This is the guy that makes the cluster be to its desired state.
+* Etcd
+  - key-value db that stores all k8s cluster related data.
+
+
+Components Shared by Nodes
+--------------------------
+
+There are some components that are shared by the nodes, whether they are
+control or workers.
+
+* Kubelet
+  - agent that makes sure the necessary containers are running in a pod.
+  - this is the glue between k8s and the container runtime engine.
+
+* Kube Proxy
+  - every node has this network proxy to enable network communication and
+    implement their rules.
+
+* Container runtime
+  - the container runtime that will manage the containers. Not really needed in
+    control planes.
+
+
+Advantages on Using k8s
+-----------------------
+
+* Portability
+  - the container runtime engine can run stuff regardless of whether you run it
+    on a vm, bm or even on a raspberry. So you have portability for your things
+    regardless of where the cluster is located.
+* Resilience 
+  - controllers are always looking to be on the desired state. Meaning it will
+    try to self-heal when something goes array.
+* Scalability 
+  - k8s can scale the number of pods on demand or automatically 
+* Extensibility
+  - When the core functionality is not enough you can introduce CRDs that
+    extend the functionality of the cluster.

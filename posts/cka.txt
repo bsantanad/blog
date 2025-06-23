@@ -31,7 +31,7 @@ Features
     cluster you want, via yamls, and it will do its best to create it.
 - Autoscaling
   - k8s can also automatically (or manually) scale resources when needed.
-- Application management 
+- Application management
   - When deploying new versions for your application, you can use k8s to manage
     the roll out technique. As well as come back to previous rollouts
 - Persistent Storage
@@ -61,7 +61,7 @@ Control Plane Nodes
 -------------------
 
 These have different components to do their job:
-* API Server 
+* API Server
   - Exposes the k8s api to clients (kubectl)
   - Here is where the authentication, authorization and admission control also
     happens.
@@ -101,11 +101,57 @@ Advantages on Using k8s
   - the container runtime engine can run stuff regardless of whether you run it
     on a vm, bm or even on a raspberry. So you have portability for your things
     regardless of where the cluster is located.
-* Resilience 
+* Resilience
   - controllers are always looking to be on the desired state. Meaning it will
     try to self-heal when something goes array.
-* Scalability 
-  - k8s can scale the number of pods on demand or automatically 
+* Scalability
+  - k8s can scale the number of pods on demand or automatically
 * Extensibility
   - When the core functionality is not enough you can introduce CRDs that
     extend the functionality of the cluster.
+
+
+Interacting with K8s
+====================
+
+
+API Primitives and Objects
+--------------------------
+
+K8s has api resources which are the building blocks of the cluster. These are
+your pods, deployments, services, and so on.
+
+Every k8s primitive follows a general structure:
+- api version:
+  - defines the structure of a primitive and uses it to validate the
+    correctness of the data.
+  - you can do `k api-versions` to see the versions compatible with your
+    cluster
+- kind
+  - the type of the primitive
+- metadata
+  - name, namespace, high level info
+  - here you see the UID, which is an id k8s generates for each object.
+- spec
+  - the desired state of the resource
+- status
+  - actual state of the resource
+
+
+kubectl
+-------
+
+This is how we talk to the api. Usually you do:
+```
+k <verb> <resource> <name>
+```
+Keep in mind we usually have different stuff in different namespaces, so we are
+always appending `-n <some namespace>` to the command.
+
+The name of an object has to be unique across all objects of the same resource
+within a namespace.
+
+
+Managing Objects
+----------------
+

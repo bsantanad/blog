@@ -155,3 +155,68 @@ within a namespace.
 Managing Objects
 ----------------
 
+There are two ways to manage objects the imperative or the declarative way.
+
+Imperative
+---
+
+The imperative is where you use commands to make stuff happen in the cluster,
+say you want to create an nginx pod you would do:
+```
+k run --image=nginx:latest nginx --port=80
+```
+This would create the pod in the cluster when you hit enter. In my professional
+experience, you hardly ever create stuff like that. The only time I use it is
+to create temporary pods to test something.
+
+There are other verbs which you might use a bit more, `edit` brings up the raw
+config of the resource and you can change it in the fly. Although I would
+recommend just do this for testing things. Hopefully your team has the
+manifests under a version control system, if you edit stuff like this it
+would mess it up.
+
+There is also `patch` which I have never used, but it...
+> Update fields of a resource using strategic merge patch, a JSON merge patch,
+> or a JSON patch.
+
+There is also `delete` which -- as you probably guess already -- deletes the
+resource. Usually the object gets a 30 sec grace period for it to die. But if it
+does not the kubelet will try to kill it forcefully.
+
+If you do
+```
+k delete pod nginx --now
+```
+It will ignore the grace period.
+
+
+Declarative
+---
+
+This is where you have a bunch of `yaml`s which your definitions of resources,
+the cool thing about this is that you can version control them. Say you have a
+`nginx-deploy.yaml`. You can create it in the cluster with:
+```
+k apply -f nginx-deploy.yaml
+```
+This gives you more flexibility on what you are doing. Since you can just go to
+the file change stuff and apply it again.
+
+
+Hybrid
+---
+
+Usually I use a hybrid approach, most of the imperative commands have this
+`--dry-run=client -o yaml` flag that you can append to to the command and it
+will render the yaml manifest. You can redirect that to a file and start
+working on that. You open the yaml with your favourite text editor, and then
+mount volumes and stuff like that.
+
+There are more ways to manage the resources for example you can use kustomize
+to render different values based on the same manifest, or with helm to bring up
+complete apps/releases to just cluster. Probably we will go over them later in
+the book.
+
+
+Cluster Installation and Upgrade
+================================

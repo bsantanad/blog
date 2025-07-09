@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="/static/water.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="UTF-8">
+    <title>async messaging</title>
+    <link rel="stylesheet" href="/static/highlight.min.css">
+    <script src="/static/highlight.min.js"></script>
+    <script>hljs.highlightAll();</script>
+    <style>
+        body {
+            font-family: "SF Pro Display", system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue";
+            max-width: 960px;
+            margin: 0 auto;
+        }
+        h2 > a {
+            color: black;
+            text-decoration: none;
+        }
+        h2 > a:hover {
+            text-decoration: underline;
+        }
+        h2 > a:visited {
+            color: black;
+        }
+
+        a:visited {
+            color: blue;
+        }
+
+        .important {
+            background-color: lightgray;
+            padding: 1em
+        }
+
+        .chapter {
+            font-style: italic;
+
+        }
+    </style>
+</head>
+<body>
+<a href='/'>
+    < back home
+</a>
+<hr>
+<h1 id='top'>~ asynchronous messaging</h1>
+<small>
+notes on chapter 7 of Foundations of Scalable Systems by Ian Gorton Published
+by O'Reilly Media, Inc.
+</small>
+<br>
+<a href='#table'>table of contents</a>
+<p>
+In a distributed system, the components need to exchange information between
+them. This can be done in a <i>synchronous way</i>, where a component sends a
+message, waits for the response and then continue doing stuff; or it can be
+done in an <i>asynchronous way</i> where the component sends the message and
+continues doing stuff without waiting for the response.
+</p>
+<p>
+The book has a nice example, where if a person wants to return a Amazon
+package, you go to Fedex give them the package, and leave the store. You do not
+stay in the store until Amazon gets your package and give you a refund. You
+operate in an asynchronous way.
+</p>
+<p>
+Distributed systems do the same, clients (known as producers) can give their
+messages to a messaging service and trust that it will be handled, so the
+producers can continue to the next step on its logic.
+</p>
+<h2 id='intro-msg'>introduction to messaging</h2>
+<p>
+There is a lot of choice on messaging platforms. In the book they use <a
+href='https://www.rabbitmq.com'>rabbitmq</a> but the basics are the same. So
+knowledge is transferable.
+</p>
+<h3 id='intro-msg-primitives'>messaging primitives</h3>
+<p>A messaging system if made up of the following:
+<ul>
+    <li>
+        <p><i>Message queues</i>: where the messages will be stored</p>
+    </li>
+    <li>
+        <p><i>Producers</i>: send the messages to the queues</p>
+    </li>
+    <li>
+        <p><i>Consumers</i>: get/retrieve the messages from the queues</p>
+    </li>
+    <li>
+        <p><i>Message Broker</i>: manages one or more queues</p>
+    </li>
+</ul>
+<pre>
+<code>
+                message broker
+publisher -->     [][][][][]    <-- consumer
+                    queue1
+</code>
+</pre>
+</p>
+<p>
+The message broker will manage the queues. A producer will send messages to a
+named queue on the broker, multiple producers can send messages to the same
+queue. The producer will wait until the broker says it got the message to
+consider the operation complete.
+</p>
+<p>
+Many consumers can take messages from the same queue. Each message is consumed
+by exactly one consumer. There are two ways for the consumer to get the
+message, <i>pull</i> and <i>push</i>.
+</p>
+<p>
+For pull (also known as polling), the consumer will request from the broker new
+messages, if it does not have the consumer must ask until the next message
+arrive.
+</p>
+<p>
+For push, the consumer tells the broker that it want a message from the queue,
+the consumer provides a <i>callback function</i> <label style='color:
+blue;'>[need to check details on how this is done]</label>  that should be
+invoked  when a message is available. The consumer can then continue doing
+other stuff, and when the message is available via the callback function,
+process it. This method is recommended when available.
+</p>
+
+<p>
+Finally, there are two type of ways to acknowledge a message had been consumed,
+automatic and manual. This is needed because the broker usually removes the
+message form the queue once it has been consumed.
+</p>
+
+<p>
+Automatic is as soon as the consumer get the message it is marked as consumed,
+manual is when the consumer wants to process the message makes sure everything
+is okay and then it tells the broker that it can go ahead and mark it as
+consumed.
+</p>
+
+<h3 id='intro-msg-persistence'>message persistence</h3>
+
+<p>
+Usually message brokers have their queues in memory this making faster to read
+and write from it. But if the server crash, we would lose all the data from the
+queue.
+</p>
+<p>
+To prevent this (data safety) queues can configured to be stored in disk too,
+this makes things a bit slower, but you are a bit more safe against restarts.
+</p>
+<p>
+You can also set it up to use both, store in disk, but also use memory, so you
+get the best of both worlds.
+</p>
+
+<h3 id='intro-msg-pub-sub'>publish-subscribe</h3>
+
+<p>
+Message queues deliver each message to exactly one consumer. But what if we
+want many consumers to read from one queue. This pattern is known as
+"publish-subscribe" architecture. In "publish-subscribe" systems, queues are
+known as topics.
+</p>
+
+<p>
+Publishers and consumers are completely decoupled. As a consumer you can just
+subscribe to the topic you need and get all the messages. This makes the
+architecture highly extensible as a new subscriber can be added without any
+changes to the system.
+</p>
+
+<p>
+This can also makes processing messages faster since it can be done in
+parallel.
+</p>
+
+<p>
+The drawback is that this of course will create more of a burden on the broker
+since it has to acknowledge all the consumers receiving the message. The book
+says that the "push" method described above is better for this.
+</p>
+
+<h3 id='intro-msg-persistence'>message replication</h3>
+
+<p>
+The broker is a single point of failure, if it dies, you are left without any
+messages, which is hardly ideal.
+</p>
+<p>
+Usually message brokers enable queues and topics to be replicated in different
+hardware. This works by one node being the leader. Publishers will send
+messages to it, and consumers will consumer from it. But the broker will also
+have the task to replicate its state to the other nodes. If it fails, consumers
+can simply continue working with any other node.
+</p>
+<p>
+Seems like it is a hard to implement algorithm, and the author suggest using
+existing software.
+</p>
+
+
+<h3 id='table'>~ table of contents</h3>
+<ul>
+  <li>
+    <a href='#intro-msg'>introduction to messaging</a>
+    <ul>
+        <li><a href="#intro-msg-primitives">messaging primitives</a></li>
+        <li><a href="#intro-msg-persistence">messaging persistence</a></li>
+        <li><a href="#intro-msg-pub-sub">publish-subscribe</a></li>
+        <li><a href="#intro-msg-replication">message replication</a></li>
+    </ul>
+  </li>
+</ul>
+
+<p><a href='#top'>↑ go to the top</a></p>
+
+</body>
+</html>
+
+

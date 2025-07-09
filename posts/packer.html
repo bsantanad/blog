@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="/static/water.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="UTF-8">
+    <title>packer</title>
+    <link rel="stylesheet" href="/static/highlight.min.css">
+    <script src="/static/highlight.min.js"></script>
+    <script>hljs.highlightAll();</script>
+    <style>
+        body {
+            font-family: "SF Pro Display", system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue";
+            max-width: 960px;
+            margin: 0 auto;
+        }
+        h2 > a {
+            color: black;
+            text-decoration: none;
+        }
+        h2 > a:hover {
+            text-decoration: underline;
+        }
+        h2 > a:visited {
+            color: black;
+        }
+
+        a:visited {
+            color: blue;
+        }
+
+        .important {
+            background-color: lightgray;
+            padding: 1em
+        }
+
+        .chapter {
+            font-style: italic;
+
+        }
+    </style>
+</head>
+<body>
+<a href='/'>
+    < back home
+</a>
+<hr>
+<h1 id='top'>~ packer</h1>
+<a href='#table'>table of contents</a>
+<h2 id='what'>what is packer?</h2>
+<p>
+Packer is a tool to create machine images for multiple platforms from a single
+template.
+</p>
+<h2 id='using'>packer file structure</h2>
+<p>
+Packer uses configuration files to create the images, these are called
+templates. They are coded in Hashicorp Configuration Language (hcl).
+</p>
+<p>
+We will follow the documentation official tutorial on <a
+href='https://developer.hashicorp.com/packer/tutorials/aws-get-started/aws-get-started-build-image'>how
+to build an image</a> for this section. So go there for any clarifications.
+</p>
+
+<h3 id='packer'>packer block</h3>
+<p>
+You will have a <code>packer {}</code> block. Here you will have the setting
+for packer, and you will add the plugins you need, например:
+<pre>
+<code>
+packer {
+  required_plugins {
+    amazon = {
+      version = ">= 1.2.8"
+      source  = "github.com/hashicorp/amazon"
+    }
+  }
+}
+</code>
+</pre>
+</p>
+<p>
+You need to specify the <code>source</code> of the plugin; which is where
+packer will look for to download the plugin. <code>version</code> is optional
+but nice to have.
+</p>
+
+<h3 id='source'>source block</h3>
+
+<p>
+This is the blueprint for the machine we want to build. Here we add all the
+infrastructure information we need for it.
+</p>
+
+<p>
+After the <code>source</code> keyword, we specify what type <i>builder
+plugin</i> we are going to use. A <i>builder plugin</i> is a packer component
+that will create the machine and make it into an image.
+</p>
+
+<pre>
+<code>
+source "amazon-ebs" "ubuntu" {
+  ami_name      = "learn-packer-linux-aws"
+  instance_type = "t2.micro"
+  region        = "us-west-2"
+  source_ami_filter {
+    filters = {
+      name                = "ubuntu/images/*ubuntu-jammy-22.04-amd64-server-*"
+      root-device-type    = "ebs"
+      virtualization-type = "hvm"
+    }
+    most_recent = true
+    owners      = ["099720109477"]
+  }
+  ssh_username = "ubuntu"
+}
+</code>
+</pre>
+</p>
+
+<p>
+Here we are using the <code>amazon-ebs</code> builder plugin. This will
+basically launch an <code>ec2</code> instance from a source AMI, provision the
+running machine, and then make an AMI out of that.  We are naming it
+<code>ubuntu</code>
+</p>
+<p>
+Each builder has its attributes. In this case <code>amazon-ebs</code> is going
+to launch a <code>t2.micro</code> in <code>us-west-2</code> using an
+<code>ubuntu-jammy</code> based image. Then it will create a new AMI image
+named <code>learn-packer-linux-aws</code>.
+</p>
+
+<h3 id='build'>build block</h3>
+<p>
+Finally we have the <code>build</code> block. Here is where later we will add
+stuff to provision the image with.
+
+<pre>
+<code>
+build {
+  sources = [
+    "source.amazon-ebs.ubuntu"
+  ]
+}
+</code>
+</pre>
+</p>
+
+<p>
+You can see the full <code>.pkr.hcl</code> file <a
+href='https://github.com/bsantanad/hashicorp.learning/blob/main/packer/aws-ubuntu.pkr.hcl'>here</a>.
+</p>
+
+<h2 id='packer-cli'><code>packer</code> cli</h2>
+<p>
+Assuming you are inside the directory where you have the packer configuration
+file
+</p>
+<ul>
+    <li>
+        <p><code>packer init .</code>: downloads plugins</p>
+    </li>
+    <li>
+        <p><code>packer fmt .</code>: formats the configs</p>
+    </li>
+    <li>
+        <p><code>packer vaildate .</code>: self explanatory</p>
+    </li>
+    <li>
+        <p><code>packer build aws-ubuntu.pkr.hcl</code>: build the image</p>
+    </li>
+</ul>
+
+
+<h3 id='table'>~ table of contents</h3>
+<ul>
+  <li><a href='#what'>what is packer?</a></li>
+  <li>
+	<a href='#using'>packer file structure</a>
+	<ul>
+		<li><a href='#packer'>packer block</a></li>
+		<li><a href='#source'>source block</a></li>
+		<li><a href='#build'>build block</a></li>
+	</ul>
+  </li>
+  <li> <a href='#packer-cli'><code>packer</code>cli</a> </li>
+</ul>
+
+<p><a href='#top'>↑ go to the top</a></p>
+
+</body>
+</html>
+
+

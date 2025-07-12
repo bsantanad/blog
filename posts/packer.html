@@ -45,6 +45,11 @@
     < back home
 </a>
 <hr>
+<small><i>
+Crated on <time datetime="2025-07-8">July 8, 2025</time>; Last modified on
+<time datetime="2025-07-12">July 12, 2025.</time>
+</i></small>
+<br>
 <h1 id='top'>~ packer</h1>
 <a href='#table'>table of contents</a>
 <h2 id='what'>what is packer?</h2>
@@ -82,7 +87,7 @@ packer {
 </p>
 <p>
 You need to specify the <code>source</code> of the plugin; which is where
-packer will look for to download the plugin. <code>version</code> is optional
+packer will look to download the plugin. <code>version</code> is optional
 but nice to have.
 </p>
 
@@ -167,26 +172,194 @@ file
         <p><code>packer fmt .</code>: formats the configs</p>
     </li>
     <li>
-        <p><code>packer vaildate .</code>: self explanatory</p>
+        <p><code>packer validate .</code>: self-explanatory</p>
     </li>
     <li>
         <p><code>packer build aws-ubuntu.pkr.hcl</code>: build the image</p>
     </li>
 </ul>
+<p>
+There is no subcommand for deleting an image. You need to <i>deregister</i>
+(delete) the AMI from AWS directly, when you do it be sure to also delete the
+snapshot that was created.
+</p>
 
+<h2 id='provision'>provision images</h2>
+<p>
+In the above example we just repackage an image that already exists.  Packer
+becomes useful when we can configure that image to our liking, installing
+different packages, setting up files, and then turning that into an image we
+can reuse across a fleet of servers.
+</p>
+<p>
+Packer can do this provisioning automatically, so you can setup a pipeline that
+builds the image every time there is a trigger.
+</p>
+<h3 id='provision-template'>add provisioner to template</h3>
+<p>
+Continuing from the above example where we are using <code>amazon-ebs</code>,
+we can review that we are using the <a
+href="https://developer.hashicorp.com/packer/docs/communicators/ssh">ssh
+communicator</a>.  Meaning that we will communicate to the <code>ec2</code>
+instance via ssh. We are specifying a username (<code>ssh_username =
+"ubuntu"</code>), which means for provisioning packer will use a temporary ssh
+credentials.
+</p>
+
+<p>
+Inside the build block we can add what we want to configure on the
+<code>ec2</code> instance,  by using a <a
+href="https://developer.hashicorp.com/packer/docs/provisioners">provisioner</a>.
+We use the <code>shell</code> type which basically let us do whatever we want
+with a shell.
+<pre>
+<code>
+provisioner "shell" {
+  environment_vars = [
+    "FOO=hello world",
+  ]
+  inline = [
+    "echo Installing Kubeadm",
+    "sudo apt-get update",
+    "sudo apt-get install -y kubeadm",
+    "echo \"FOO is $FOO\" > example.txt",
+  ]
+}
+</code>
+</pre>
+</p>
+
+<p>
+You can have multiple of these. So your build block would look something like:
+<pre>
+<code>
+build {
+  name = "learn-packer"
+  sources = [
+    "source.amazon-ebs.ubuntu"
+  ]
+  provisioner "shell" {
+    environment_vars = [
+      "FOO=hello world",
+    ]
+    inline = [
+      "echo Installing Git",
+      "sudo apt-get update",
+      "sudo apt-get install -y git",
+      "echo \"FOO is $FOO\" > example.txt",
+    ]
+  }
+  provisioner "shell" {
+    inline = [
+      "echo \"Hello there my friend\"",
+    ]
+  }
+}
+</code>
+</pre>
+</p>
+
+<p>
+Then you go ahead and <code>packer build</code> it and you are good to go.
+</p>
+
+<h2 id='variables'>variables</h2>
+<p>
+You can add variables to your templates in order to not modify stuff directly
+on the template every time you run it, say, modify a name, a version or
+whatever.
+</p>
+<p>
+There are two types
+<ul>
+  <li>
+      <p>
+        <b>input variable</b>: this can be added with command line flags,
+        environment variables and so on.
+<pre>
+<code>
+variable "ami_prefix" {
+  type    = string
+  default = "learn-packer-linux-aws-redis"
+}
+</code>
+</pre>
+        If you do not modify the variable, it will use the default value stated
+        there.
+      </p>
+  </li>
+
+  <li>
+      <p>
+        <b>local variable</b>: these are useful when you need to format commonly used
+        values
+<pre>
+<code>
+locals {
+  timestamp = regex_replace(timestamp(), "[- TZ:]", "")
+}
+</code>
+</pre>
+        What is <code>timestamp</code> you ask? There are some <a
+        href="https://developer.hashicorp.com/packer/docs/templates/hcl_templates/functions">built-in
+        functions</a>.
+      </p>
+  </li>
+</ul>
+</p>
+<p>
+Do notice that the way you define them is different, for the <b>input</b> each
+has its own block, and the type defined. For the <b>local</b> they are all
+inside a block.
+</p>
+<p>
+You call them like you were using some type of <code>fstring</code>s.
+</p>
+<pre>
+<code>
+"${var.ami_prefix}-${local.timestamp}"
+</code>
+</pre>
+
+<h2 id='build-parallel'>build multiple images in parallel</h2>
+<p>
+You just need to create another <code>source</code> block, and add the name to
+the <code>sources</code> array in your build block.
+</p>
+<pre>
+<code>
+build {
+  name    = "learn-packer"
+  sources = [
+-    "source.amazon-ebs.ubuntu"
++    "source.amazon-ebs.ubuntu",
++    "source.amazon-ebs.ubuntu-focal"
+  ]
+  ## ...
+}
+</code>
+</pre>
 
 <h3 id='table'>~ table of contents</h3>
 <ul>
   <li><a href='#what'>what is packer?</a></li>
   <li>
-	<a href='#using'>packer file structure</a>
-	<ul>
-		<li><a href='#packer'>packer block</a></li>
-		<li><a href='#source'>source block</a></li>
-		<li><a href='#build'>build block</a></li>
-	</ul>
+    <a href='#using'>packer file structure</a>
+    <ul>
+        <li><a href='#packer'>packer block</a></li>
+        <li><a href='#source'>source block</a></li>
+        <li><a href='#build'>build block</a></li>
+    </ul>
   </li>
-  <li> <a href='#packer-cli'><code>packer</code>cli</a> </li>
+  <li> <a href='#packer-cli'><code>packer</code> cli</a> </li>
+  <li>
+    <a href='#provision'>provision</a>
+    <ul>
+        <li><a href='#provision-template'>add provisioner to template</a></li>
+    </ul>
+  </li>
+  <li> <a href='#variables'>variables</a> </li>
+  <li> <a href='#build-parallel'>build multiple images in parallel</a> </li>
 </ul>
 
 <p><a href='#top'>↑ go to the top</a></p>

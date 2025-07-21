@@ -47,7 +47,7 @@
 <hr>
 <small><i>
 Crated on <time datetime="2025-07-8">July 8, 2025</time>; Last modified on
-<time datetime="2025-07-12">July 12, 2025.</time>
+<time datetime="2025-07-21">July 21, 2025.</time>
 </i></small>
 <br>
 <h1 id='top'>~ packer</h1>
@@ -340,6 +340,67 @@ build {
 </code>
 </pre>
 
+<h2 id='ami'>aws ami</h2>
+
+<p>
+When searching for a specific AMI in the AMI Catalog can be a be a bit puzzling
+what to write in the <code>source_ami_filter</code> section of the packer file.
+Any of the filters in <a
+href="https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_DescribeImages.html">AWS
+documentation DescribeImages</a> can be used. But where do you get the
+information?
+
+<pre>
+<code>
+  source_ami_filter {
+    filters = {
+      name                = "ubuntu/images/*ubuntu-jammy-22.04-amd64-server-*"
+      root-device-type    = "ebs"
+      virtualization-type = "hvm"
+    }
+    most_recent = true
+    owners      = ["099720109477"]
+  }
+</code>
+</pre>
+</p>
+<p>
+Like where did we get the path for the <code>name</code> or the number for
+<code>owners</code>?
+</p>
+
+<p>
+If you search the UI, it might be a bit hard to find that information, so I
+recommend you install the <code>aws</code> cli.
+</p>
+<p>
+Once you do that you can do that you can run,
+<pre>
+<code>
+aws configure
+</code>
+</pre>
+Add your access key and so on, to then run
+<pre>
+<code>
+aws ec2 describe-images
+</code>
+</pre>
+You will get a huge <code>json</code> with all the AMI's available to you, and
+will all the information you can use to filter it in the
+<code>source_ami_filter</code>.
+</p>
+
+<p>
+If you do not want to get all of the images, you can start filtering a bit from
+the cli, say,
+<pre>
+<code>
+aws ec2 describe-images --filters Name=free-tier-eligible,Values=true
+</code>
+</pre>
+</p>
+
 <h3 id='table'>~ table of contents</h3>
 <ul>
   <li><a href='#what'>what is packer?</a></li>
@@ -360,6 +421,7 @@ build {
   </li>
   <li> <a href='#variables'>variables</a> </li>
   <li> <a href='#build-parallel'>build multiple images in parallel</a> </li>
+  <li> <a href='#ami'>aws ami</a> </li>
 </ul>
 
 <p><a href='#top'>↑ go to the top</a></p>

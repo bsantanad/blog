@@ -435,7 +435,7 @@ let everything ready for me to run the <code>kubeadm</code> commands.
 </p>
 
 <p>
-<code>kubeadm</code> is the tool to create a cluster. 
+<code>kubeadm</code> is the tool to create a cluster.
 </p>
 
 <p>
@@ -454,10 +454,10 @@ Here is a non-comprehensive list of what is needed before running
         <p>Disable swap; otherwise kubelet is going to fail to start</p>
     </li>
     <li>
-        <p>Installing a container runtime, like containerd</p>
+        <p>Install a container runtime, like containerd</p>
     </li>
     <li>
-        <p>Installing kubeadm</p>
+        <p>Install <code>kubeadm</code></p>
     </li>
 </ul>
 </p>
@@ -466,7 +466,7 @@ Here is a non-comprehensive list of what is needed before running
 <h3 id='extension_interfaces'><a href='#extension_interfaces'>Extension Interfaces</a></h3>
 <p>
 There are some things k8s does not have by default. You need to install this
-extensions as needed. 
+extensions as needed.
 <ul>
   <li>
     <p>
@@ -496,7 +496,7 @@ extensions as needed.
       <ul>
         <li>
           This is the standard to implement plugins for interacting with
-          block/file storage 
+          block/file storage
         </li>
       </ul>
     </p>
@@ -505,6 +505,137 @@ extensions as needed.
 </p>
 
 <h3 id='setup_cluster'><a href='#setup_cluster'>Setup Cluster</a></h3>
+
+<p>
+Once you have <code>kubeadm</code> in your system everything else is pretty
+straight forward. You just ssh to your control plane and run:
+<pre>
+<code>
+sudo kubeadm init --pod-network-cidr=10.244.0.0/16
+</code>
+</pre>
+</p>
+
+<p>
+This runs some preflight checks to see if everything is working properly, if
+not it will likely print a message telling you about what is wrong. In my case
+it complained about <code>/proc/sys/net/ipv4/ip_forward</code> being disabled.
+But was able to fix it by just doing <code>echo 1 | sudo tee
+/proc/sys/net/ipv4/ip_forward</code>.
+</p>
+
+<p>
+Where does the <code>cidr</code> comes from? I had exactly the same question.
+It seems that it will depend on the CNF you will install, but do not quote me
+on that.
+</p>
+
+<p>
+Once the command runs successfully, it will print next steps:
+<pre>
+<code>
+Your Kubernetes control-plane has initialized successfully!
+
+To start using your cluster, you need to run the following as a regular user:
+
+  mkdir -p $HOME/.kube
+  sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+  sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+Alternatively, if you are the root user, you can run:
+
+  export KUBECONFIG=/etc/kubernetes/admin.conf
+
+You should now deploy a pod network to the cluster.
+Run "kubectl apply -f [podnetwork].yaml" with one of the options listed at:
+  https://kubernetes.io/docs/concepts/cluster-administration/addons/
+
+Then you can join any number of worker nodes by running the following on each as root:
+
+kubeadm join ip.control.panel.and:port --token some-cool-token \
+	--discovery-token-ca-cert-hash sha256:some-cool-hash
+</code>
+</pre>
+</p>
+
+<p>
+Just follow those steps. You ssh into the workers and join them with that
+command. If you lost the tokens for some reason you can reprint them with:
+<pre>
+<code>
+kubeadm token create --print-join-command
+</code>
+</pre>
+</p>
+
+<p>
+Now, before joining the workers, you need to install the CNI, you can pick any
+of the ones on <a
+href="https://kubernetes.io/docs/concepts/cluster-administration/addons/">the
+k8s add-ons docs</a>.
+</p>
+
+<p>
+Installing them is nothing fancy, your literally just run a `k apply -f
+some-mainfest` and be done with it. I went with <a
+href="https://docs.tigera.io/calico/latest/getting-started/kubernetes/flannel/install-for-flannel">calico</a>
+for no particular reason.
+</p>
+
+<h3 id='highly_available'><a href='#highly_available'>Highly Available (HA) Cluster</a></h3>
+
+<p>
+The control plane is like the most important part of the cluster, since if it
+fails, you are not even going to be able to talk to the API to do stuff. We can
+add redundancy to improve this. Here is where HA architectures come into play.
+</p>
+
+<p>
+There are two
+<ul>
+    <li>
+        <p>Stacked etcd topology</p>
+    </li>
+    <li>
+        <p>External etcd topology</p>
+    </li>
+</ul>
+Remember <i>etcd</i> is key-value db k8s uses to store all of its info.
+</p>
+
+<h4 id='stacked_etcd'><a href='#stacked_etcd'>Stacked etcd topology</a></h4>
+<p>
+You have at least three control planes each with its own etcd in the same node.
+All the nodes running at the same time and the workers talk to them through a
+load balancer, if one dies, we still have others.
+</p>
+<img src="/static/img/cka/kubeadm-ha-topology-stacked-etcd.svg" alt="stacked etcd topology">
+<small>
+Diagram representing this arch, that I stole from the <a href="https://kubernetes.io/images/kubeadm/kubeadm-ha-topology-stacked-etcd.svg">k8s docs</a>
+on this topic.
+</small>
+<hr>
+
+<h4 id='external_etcd'><a href='#external_etcd'>External etcd topology</a></h4>
+<p>
+Per control plane we have two nodes, one that runs etcd and one that runs the
+actual control plane stuff. They communicate through the
+<code>kube-apiserver</code> api.
+</p>
+<p>
+This topology require more nodes, and that means a bit more manage overhead.
+</p>
+<img src="/static/img/cka/kubeadm-ha-topology-external-etcd.svg" alt="stacked etcd topology">
+<small>
+Diagram representing this arch, that I stole from the <a href="https://kubernetes.io/images/kubeadm/kubeadm-ha-topology-stacked-etcd.svg">k8s docs</a>
+on this topic.
+</small>
+<hr>
+
+<h3 id='upgrading_cluster'><a href='#upgrading_cluster'>Upgrading Cluster Version</a></h3>
+
+
+
 
 <hr>
 <h3 id='table'>~ Table of Contents</h3>
@@ -538,9 +669,16 @@ extensions as needed.
   <li>
     <a href='#cluster_installation'>Cluster Installation and Upgrade</a>
     <ul>
-      <li><a href='#provision_infra'>Get Infrastructure Ready</a></li> 
-      <li><a href='#extension_interfaces'>Extension Interfaces</a></li> 
-      <li><a href='#setup_cluster'>Setup Cluster</a></li> 
+      <li><a href='#provision_infra'>Get Infrastructure Ready</a></li>
+      <li><a href='#extension_interfaces'>Extension Interfaces</a></li>
+      <li><a href='#setup_cluster'>Setup Cluster</a></li>
+      <li><a href='#highly_available'>Highly Available (HA) Cluster</a>
+        <ul>
+          <li><a href="stacked_etcd">Stacked etcd topology</a></li>
+          <li><a href="external_etcd">External etcd topology</a></li>
+        </ul>
+      </li>
+      <li><a href='#upgrading_cluster'>Upgrading Cluster Version</a></li>
   </li>
 </ul>
 <p><a href='#top'>↑ go to the top</a></p>

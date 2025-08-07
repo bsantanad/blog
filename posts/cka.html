@@ -654,6 +654,21 @@ The high level plan is this:
 </ol>
 </p>
 
+<blockquote>
+<p>
+One last thing before going to the steps. You are going to see that when we
+<code>drain</code> a node we use the <code>--ignore-daemonsets</code> flag.
+Which begs the question, what is a daemonset?
+</p>
+<p>
+A daemonset defines pods needed for node-local stuff, say you want to have
+a daemon on each node that collects logs. You can deploy a daemonset for it.
+When we drain a node to upgrade we tell it to not kick out of there the
+daemonsets, since we might actually need those for the node to operate
+properly.
+</p>
+</blockquote>
+
 <h4 id='upgrade_control_planes'><a href='#upgrade_control_planes'>Upgrade Control Planes</a></h4>
 <ol>
     <li>

@@ -48,7 +48,7 @@
 <hr>
 <small><i>
 Crated on <time datetime="2025-07-18">July 18, 2025</time>; Last modified on
-<time datetime="2025-08-02">Aug 2, 2025.</time>
+<time datetime="2025-08-09">Aug 9, 2025.</time>
 </i></small>
 <br>
 <small>
@@ -60,7 +60,7 @@ notes</a> to check those out.
 <a href='#table'>Table of Contents</a>
 
 <h2 id='exam_details'><a href='#exam_details'>Sections</a></h2>
-
+<section>
 <ul>
   <li> 25% Cluster Arch, Installation and Configuration </li>
   <li> 15% Workloads and Scheduling </li>
@@ -68,8 +68,10 @@ notes</a> to check those out.
   <li> 10% Storage </li>
   <li> 30% Troubleshooting </li>
 </ul>
+</section>
 
 <h2 id='k8s_nutshell'><a href='#k8s_nutshell'>K8s in a Nutshell</a></h2>
+<section>
 <p>
 K8s is a container orchestration tool. Today there are a lot of microservices
 architectures. We can have a container per service and managing all those
@@ -284,8 +286,10 @@ control or workers.
     </ul>
   </li>
 </ul>
+</section>
 
 <h2 id='interacting_k8s'><a href='#interacting_k8s'>Interacting with K8s</a></h2>
+<section>
 
 <h3 id='api_primitives'><a href='#api_primitives'>API Primitives and Objects</a></h3>
 <p>
@@ -423,8 +427,10 @@ to render different values based on the same manifest, or with helm to bring
 up complete apps/releases to just cluster. Probably we will go over them
 later in the book.
 </p>
+</section>
 
 <h2 id='cluster_installation'><a href='#cluster_installation'>Cluster Installation and Upgrade</a></h2>
+<section>
 
 <h3 id='provision_infra'><a href='#provision_infra'>Get Infrastructure Ready</a></h3>
 
@@ -807,7 +813,122 @@ k uncordon worker-node
         <p><code>k get nodes</code> should show the new version</p>
     </li>
 </ol>
+</section>
 
+<h2 id='etcd'><a href='#etcd'>etcd</a></h2>
+<section>
+<p>
+etcd is a key-value store used as k8s backing store for all the cluster
+information. They are a stand alone project with its own <a
+href="https://etcd.io/">docs</a>. Since it is used for backup, we need to know
+how to use it in order to restore or backup the cluster.
+</p>
+
+<p>
+There are two cli's we will be working with <code>etcdcutl</code> and
+<code>etcdutl</code>.
+<ul>
+    <li>
+        <p>
+            <code>etcdctl</code>: primary way to interact with etcd over the
+            network.
+        </p>
+    </li>
+    <li>
+        <p>
+            <code>etcdutl</code>: designed to operate with etcd data files
+            directly, not over the network.
+        </p>
+    </li>
+</ul>
+</p>
+
+<p>
+<code>kubeadm</code> will setup etcd as pods managed directly by the kubelet
+daemon (known as <i>static pods</i>). You can actually see them by runnin g
+</p>
+
+<h3 id='backup_etcd'><a href='#backup_etcd'>Backing up etcd cluster</a></h3>
+<p>
+All k8s data is stored in etcd, this includes sensitive data, therefore the
+snapshots created by etcd are encrypted.
+</p>
+
+<p>
+In order to talk to etcd we can <code>ssh</code> into the control plane, then
+do <code>etcdctl version</code> to verify it is installed.
+</p>
+
+<p>
+If you went with <code>kubeadm</code> as your installation way, you can see
+that there is a pod in the <code>kube-system</code> namespace that concerns
+etcd. If you <code>describe</code> it you will some information relevant to
+connect to etcd.
+<pre>
+<code>
+k describe pod etcd-cka-control-plane -n kube-system | grep '\-\-'
+      --listen-client-urls=https://10.2.0.9:2379
+      --cert-file=/etc/kubernetes/pki/etcd/server.crt
+      --key-file=/etc/kubernetes/pki/etcd/server.key
+      --trusted-ca-file=/etc/kubernetes/pki/etcd/ca.crt
+</code>
+</pre>
+
+</p>
+If  we want to talk to etcd from outside the control plane node, we will need
+the <code>--listen-client-urls</code> addresses. If you are inside the node,
+you can skip that. We are going to need the path to all the TLS things. A
+simple command you can test if you have everything right is the following
+<pre>
+<code>
+ETCDCTL_API=3 etcdctl --endpoints 10.2.0.9:2379 \
+    --cert=/etc/kubernetes/pki/etcd/server.crt \
+    --key=/etc/kubernetes/pki/etcd/server.key \
+    --cacert=/etc/kubernetes/pki/etcd/ca.crt \
+    member list
+    bbf4baa696b33a2e, started, control-plane, https://10.2.0.9:2380, https://10.2.0.9:2379
+</code>
+</pre>
+Since the certificates are inside a path which your user probably does not have
+access, you will have to <code>sudo</code> it.
+</p>
+
+<p>
+The you can create an snapshot by running the <code>snapshot save
+/path/to/new/snapshot</code> command.
+<pre>
+<code>
+ETCDCTL_API=3 etcdctl --endpoints https://162.243.29.89:2379 \
+    --cert=/etc/kubernetes/pki/etcd/server.crt \
+    --key=/etc/kubernetes/pki/etcd/server.key \
+    --cacert=/etc/kubernetes/pki/etcd/ca.crt  \
+    snapshot save snapshot.db
+2025-08-09 17:04:29.201951 I | clientv3: opened snapshot stream; downloading
+2025-08-09 17:04:29.241278 I | clientv3: completed snapshot read; closing
+Snapshot saved at snapshot.db
+</code>
+</pre>
+</p>
+
+<h3 id='restore_etcd'><a href='#restore_etcd'>Restore from snapshot</a></h3>
+
+<p>
+We will use the <code>etcdutl</code> to restore a snapshot.
+<pre>
+<code>
+etcdutl --data-dir /path/to/be/restored/to snapshot restore snapshot.db
+</code>
+</pre>
+</p>
+
+<p>
+We also need to point the etcd pod to this new path we have restored the info
+to. You can find the manifest for the etcd pod under
+<code>/etc/kubernetes/manifests/etcd.yaml</code>. There is a volume called
+<code>etcd-data</code>, point it to the new path, and restart the pod
+</p>
+
+</section>
 
 <hr>
 <h3 id='table'>~ Table of Contents</h3>
@@ -852,10 +973,17 @@ k uncordon worker-node
       </li>
       <li><a href='#upgrading_cluster'>Upgrading Cluster Version</a>
         <ul>
-          <li><a href="upgrade_control_planes">Upgrade Control Planes</a></li>
-          <li><a href="upgrade_workers">Upgrade Workers</a></li>
+          <li><a href="#upgrade_control_planes">Upgrade Control Planes</a></li>
+          <li><a href="#upgrade_workers">Upgrade Workers</a></li>
         </ul>
       </li>
+  </li>
+  <li>
+    <a href='#etcd'>etcd</a>
+        <ul>
+          <li><a href="#backup_etcd">Backing up and etcd cluster</a></li>
+          <li><a href="#restore_etcd">Restore from snapshot</a></li>
+        </ul>
   </li>
 </ul>
 <p><a href='#top'>↑ go to the top</a></p>

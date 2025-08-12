@@ -48,7 +48,7 @@
 <hr>
 <small><i>
 Crated on <time datetime="2025-07-18">July 18, 2025</time>; Last modified on
-<time datetime="2025-08-09">Aug 9, 2025.</time>
+<time datetime="2025-08-11">Aug 11, 2025.</time>
 </i></small>
 <br>
 <small>
@@ -927,7 +927,56 @@ to. You can find the manifest for the etcd pod under
 <code>/etc/kubernetes/manifests/etcd.yaml</code>. There is a volume called
 <code>etcd-data</code>, point it to the new path, and restart the pod
 </p>
+</section>
 
+<h2 id='auth'><a href='#auth'>Control Access to the k8s API</a></h2>
+<section>
+<p>
+The way anyone talks with k8s, is through the API, it does not matter if you
+are a human, or a service account you all talk to the k8s http api. When a
+request gets to the server it goes through some stages, shown in the <a
+href="https://kubernetes.io/docs/concepts/security/controlling-access/">docs</a>
+diagram which I copy pasted here:
+<img src="/static/img/cka/access-control-overview.svg" alt="access-control-overview">
+</p>
+<h3 id='api_tls'><a href="#api_tls">Transport Security</a></h3>
+<p>
+All the requests go through TLS, by default the API will run on
+<code>0.0.0.0:6443</code> but this can be changed , with
+<code>--secure-port</code> and the <code>--bind-address</code> flags.
+</p>
+
+<p>
+When you <code>kubeadm init</code> your cluster, k8s will create its own
+Certificate Authority (CA) and its key (<code>/etc/kubernetes/pki/ca.crt and
+/etc/kubernetes/pki/ca.key</code> respectively). It will use this to sign the
+certificates used by the API server.
+</p>
+
+<p>
+Inside your <code>.kube/config</code> file you will need a copy of that
+certificate, this verifies that the API's certificate is authentic and was
+signed with the clusters CA.
+</p>
+
+<h3 id='api_authentication'><a href="#api_authentication">Authentication</a></h3>
+<p>
+Once we have TLS, we can continue with authentication. The cluster admin may
+setup different authentication modules, if so they will be tried sequentially
+to see any suffices.
+</p>
+<p>
+K8s may use the whole http request to authenticate, although most modules only
+use the headers.
+</p>
+<p>
+If all the modules failed, then a <code>401</code> will be returned. If it is
+successful, the user is authenticated as an specific <code>username</code>.
+</p>
+
+<h3 id='api_authorization'><a href="#api_authorization">Authorization</a></h3>
+<h3 id='admission_control'><a href="#admission_control">Admission Control</a></h3>
+<h3 id='auditing'><a href="#auditing">Auditing</a></h3>
 </section>
 
 <hr>
@@ -983,6 +1032,16 @@ to. You can find the manifest for the etcd pod under
         <ul>
           <li><a href="#backup_etcd">Backing up and etcd cluster</a></li>
           <li><a href="#restore_etcd">Restore from snapshot</a></li>
+        </ul>
+  </li>
+  <li>
+    <a href='#auth'>Control Access to the k8s API</a>
+        <ul>
+          <li><a href="#api_tls">Transport Security</a></li>
+          <li><a href="#api_authentication">Authentication</a></li>
+          <li><a href="#api_authorization">Authorization</a></li>
+          <li><a href="#admission_control">Admission Control</a></li>
+          <li><a href="#auditing">Auditing</a></li>
         </ul>
   </li>
 </ul>

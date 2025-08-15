@@ -48,7 +48,7 @@
 <hr>
 <small><i>
 Crated on <time datetime="2025-07-18">July 18, 2025</time>; Last modified on
-<time datetime="2025-08-11">Aug 11, 2025.</time>
+<time datetime="2025-08-15">Aug 15, 2025.</time>
 </i></small>
 <br>
 <small>
@@ -975,8 +975,185 @@ successful, the user is authenticated as an specific <code>username</code>.
 </p>
 
 <h3 id='api_authorization'><a href="#api_authorization">Authorization</a></h3>
+<p>
+Once the request has passed the authentication stage, it is time to see if it
+can in fact do the action it was trying to accomplish. The request will must
+include its username, a requested action, and the resource affected by the
+action. The request then will be authorized if there is an existing policy that
+declares that the user has permissions to do the action it is intended to.
+</p>
+
+<p>
+There are different authorization modules, the administrator can setup many in
+one cluster, they will be tried one by one and if all fails a <code>403</code> will be
+returned
+</p>
+
+
 <h3 id='admission_control'><a href="#admission_control">Admission Control</a></h3>
+
+<p>
+If the authorization is successful, then we jump to admission controles. They
+are basically a piece of code that will check the data arriving in a request
+that modifies a resource. They do not control requests to <i>read</i>
+resources, only those that modify them. They usually just validate stuff. The
+thing is that if one fails the request is rejected, it is not like the others
+stages where we try one by one.
+</p>
+
 <h3 id='auditing'><a href="#auditing">Auditing</a></h3>
+<p>
+Generate a chronological set of records, documenting everything that is
+happening.
+</p>
+
+<h3 id='rbac'><a href="#rbac">Using RBAC Authorization</a></h3>
+<p>
+Role-based access control is a way of controlling access to network resources
+based on the roles an individual has. The
+<code>rbac.authorization.k8s.io</code> api group, allows you to set them up
+dynamically in the k8s cluster.
+</p>
+<h4 id='rbac_api'><a href="#rbac_api">API objects</a></h4>
+<p>
+RBAC introduces 4 new object types to the cluster, <code>Role</code>,
+<code>ClusterRole</code>, <code>RoleBinding</code>,
+<code>ClusterRoleBinding</code>.
+</p>
+<p>
+<ul>
+  <li>
+    <b> <code>Role</code> and <code>ClusterRole</code></b>
+    <p>
+        These represent a set of permissions. The only difference between the
+        two is that <code>Role</code> defines the permissions for a namespace,
+        and <code>ClusterRole</code> is not limited to a namespace.
+    </p>
+    <ul>
+      <li>
+        <b><code>Role</code></b>
+          <p>
+            Here is the command for creating a role to get and watch all the
+            pods in the nginx namespace.
+            <pre>
+            <code>
+k create role --dry-run=client -o yaml pod-reader --resource=pod --verb=get,watch -n nginx
+            </code>
+            </pre>
+          </p>
+          <p>
+            To be honest you might be better just going to the docs and copy
+            the manifest from there, since it can get a bit long to write all
+            the verbs and resources in one command.
+          </p>
+      </li>
+      <li>
+        <b><code>ClusterRole</code></b>
+        <p>
+          Since these are not bound to a namespaces you can also use them to
+          set permissions to things like nodes and persistent volumes.
+        </p>
+        </p>
+          The command is super similar, just we do not specify a namespace
+          <pre>
+          <code>
+k create clusterrole secret-watcher --resource=secret --verb=get,list --dry-run=client -o yaml
+          </code>
+          </pre>
+        </p>
+      </li>
+    </ul>
+  </li>
+  <li>
+    <b> <code>RoleBinding</code> and <code>ClusterRoleBinding</code></b>
+    <p>
+        Once you created your <code>Role</code> object you can bind it to a
+        user, or service account. This makes <code>Role</code>s reusable. For
+        example, you can create a <i>pod-read-only</i>, and bind it to many
+        <code>subjects</code> (users, groups or service accounts).
+    </p>
+    <p>
+        A <code>RoleBinding</code> may bind any <code>Role</code>  in the same
+        namespace, buuut you can also use them to bind
+        <code>ClusterRoles</code>, to a single namespace.
+    </p>
+    <p>
+      You can create them as you would expect
+      <pre>
+      <code>
+k create rolebinding pod-reader --dry-run=client -o yaml  --role=pod-readonly --user=jose
+      </code>
+      </pre>
+      Remember you can always <code>--help</code> stuff, or copy an
+      example from the wiki
+    </p>
+    <p>
+      You cannot patch/edit an existing rolebinding to change the roles. You
+      have to delete it and create one again. There is this <code>kubectl auth
+      reconcile</code> which will do that for you.
+    </p>
+  </li>
+</ul>
+</p>
+<p>
+One last tip, you can always do
+<pre>
+<code>
+ k auth can-i get pod/logs --as="some-subject" -n "ns" # can-i verb resource
+</code>
+</pre>
+To check if the role is working as expected.
+<p>
+
+<h3 id='sa'><a href="#sa">Service Account</a></h3>
+
+<p>
+A service account is a non-human account that provides an identity in a k8s
+cluster. Pods can use them to do requests against k8s api, to authenticate
+against a image registry.
+</p>
+
+<p>
+They are represented in the k8s cluster with the <code>ServiceAccount</code>
+object. They are <b>namespaced</b>, <b>lightweight</b>, <b>portable</b>.
+</p>
+
+<p>
+There is also this <code>default</code> service account created in every
+namespace. If you try to delete it the control plane replaces it. This account
+is assign to all pods if you do not manually assign one, and has api discovery
+permissions.
+</p>
+
+<p>
+You can use <code>RBAC</code> to add roles to it. It is just another subject
+you can include in the roles manifests.
+</p>
+
+<p>
+To use one you just have to:
+<ul>
+    <li>
+        <p>Create the service account, in a declarative or imperative way</p>
+    </li>
+    <li>
+        <p>Give it roles with RBAC</p>
+    </li>
+    <li>
+        <p>Assign it to a pod during its creation</p>
+    </li>
+</ul>
+If you need its identity for an external service you need to get a token.
+<pre>
+<code>
+k create token "sa-name" -n test-token
+</code>
+</pre>
+</p>
+
+<p>
+To assign one to a pod just add the <code>spec.serviceAccountName</code> field.
+</p>
 </section>
 
 <hr>
@@ -1042,6 +1219,8 @@ successful, the user is authenticated as an specific <code>username</code>.
           <li><a href="#api_authorization">Authorization</a></li>
           <li><a href="#admission_control">Admission Control</a></li>
           <li><a href="#auditing">Auditing</a></li>
+          <li><a href="#rbac">Using RBAC Authorization</a></li>
+          <li><a href="#sa">Service Accounts</a></li>
         </ul>
   </li>
 </ul>

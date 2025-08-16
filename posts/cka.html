@@ -1177,6 +1177,82 @@ To assign one to a pod just add the <code>spec.serviceAccountName</code> field.
 </p>
 </section>
 
+<h2 id='ops_crd'><a href='#ops_crd'>Operators and Custom Resources</a></h2>
+<section>
+<h3 id='cr'><a href='#cr'>Custom Resources</a></h3>
+<p>
+A <i>resource</i> is an endpoint in k8s api, that manages objects of the same type.
+One example is the <code>pods</code> resource; it is an endpoint of the api and
+you use it to create, destroy, list pod objects.
+</p>
+
+<p>
+Then a <i>custom resource</i> is an extension of k8s native api. You can
+create your own resources for your own needs. Custom resources can be created
+and destroyed dynamically on a running cluster, and once installed you can use
+<code>kubectl</code> to manage them as you would manage any other resource.
+</p>
+<p>
+Say, you might have one to create a <i>database</i> custom resource to
+represent and manage it inside of your cluster.
+</p>
+<h3 id='cc'><a href='#cc'>Custom Controllers</a></h3>
+<p>
+A <i>custom resource</i> by itself will only represent some structured data. To
+make them work in a true declarative state you need to add also a controller.
+</p>
+<p>
+In an imperative API you tell the server to do something and it does it. In a
+declarative api, like k8s is, you tell it the state you want to accomplish, in
+this case using the <i>custom resources</i> endpoints, and then there will be a
+controller that makes sure that state is true.
+</p>
+<hr>
+<small>
+One small disclaimer, using a custom resource is not a one size fits all
+solution, you have to check if you really need to implement this as a CRD or
+maybe just a separated API or even a configmap would do the trick, the <a
+href="https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/#should-i-add-a-custom-resource-to-my-kubernetes-cluster">k8s
+docs</a> have a section to help you decide whether you really need them or not.
+
+</small>
+<hr>
+<p>
+It is outside of the scope of the exam but there are two ways of creating a
+custom resource.
+<ul>
+    <li>
+        <p>Using the <code>CustomResourceDefinition</code> api resource</p>
+    </li>
+    <li>
+        <p>Using API server aggregation</p>
+    </li>
+</ul>
+The first one is simple as you do not need to code anything just define the
+custom resource in a manifest and the k8s api will handle storage and stuff
+like that. Go to the official docs for more info.
+<p>
+<h3 id='ops'><a href='#ops'>Operator Pattern</a></h3>
+<p>
+The operator pattern is creating a custom controller to manage a custom
+resource.
+</p>
+<p>
+One example would be, <i>deploying an application on demand</i>. This would
+look something like, we have a new custom resource called
+<code>ApplicationDeployment</code> where the developer specifies the application
+they want to deploy. Now when they <code>k apply -f</code> it, there would be a
+controller that takes care of all the deployment of the app.
+</p>
+<p>
+There are many operators already created by the community, you can find several
+in the <a href="https://operatorhub.io">OperatorHub</a>. A popular one is
+ArgoCD, this defines custom resources such as <code>Application</code> where
+you can point to a git repository , and it will make sure the code is in sync
+with that repository among other things. Popular on organizations using GitOps.
+</p>
+</section>
+
 <hr>
 <h3 id='table'>~ Table of Contents</h3>
 <ul>
@@ -1224,16 +1300,16 @@ To assign one to a pod just add the <code>spec.serviceAccountName</code> field.
           <li><a href="#upgrade_workers">Upgrade Workers</a></li>
         </ul>
       </li>
-  </li>
-  <li>
-    <a href='#etcd'>etcd</a>
+      </li>
+      <li>
+        <a href='#etcd'>etcd</a>
         <ul>
           <li><a href="#backup_etcd">Backing up and etcd cluster</a></li>
           <li><a href="#restore_etcd">Restore from snapshot</a></li>
         </ul>
-  </li>
-  <li>
-    <a href='#auth'>Control Access to the k8s API</a>
+      </li>
+      <li>
+        <a href='#auth'>Control Access to the k8s API</a>
         <ul>
           <li><a href="#api_tls">Transport Security</a></li>
           <li><a href="#api_authentication">Authentication</a></li>
@@ -1243,6 +1319,16 @@ To assign one to a pod just add the <code>spec.serviceAccountName</code> field.
           <li><a href="#rbac">Using RBAC Authorization</a></li>
           <li><a href="#sa">Service Accounts</a></li>
         </ul>
+      </li>
+      <li>
+        <a href='#ops_crd'>Operators and Custom Resources</a>
+        <ul>
+          <li><a href="#cr">Custom Resources</a></li>
+          <li><a href="#cc">Custom Controllers</a></li>
+          <li><a href="#ops">Operator pattern</a></li>
+        </ul>
+      </li>
+    </ul>
   </li>
 </ul>
 <p><a href='#top'>↑ go to the top</a></p>

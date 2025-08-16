@@ -1061,6 +1061,27 @@ k create clusterrole secret-watcher --resource=secret --verb=get,list --dry-run=
           </code>
           </pre>
         </p>
+        <p>
+          Another thing specific to <code>ClusterRole</code>s is that you can
+          aggregate them. When you create one you can add a label to it. Then
+          you can create another one that uses that label.
+          <pre>
+          <code>
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: monitoring-aggregate
+aggregationRule:
+  clusterRoleSelectors:
+  - matchLabels:
+      rbac.example.com/aggregate-to-monitoring: "true"
+rules: []
+          </code>
+          </pre>
+          In this example we are adding all <code>ClusterRole</code>s that have
+          the label <code>rbac.example.com/aggregate-to-monitoring: "true"
+          </code>.
+        </p>
       </li>
     </ul>
   </li>

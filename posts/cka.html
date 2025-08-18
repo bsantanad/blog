@@ -70,6 +70,7 @@ notes</a> to check those out.
 </ul>
 </section>
 
+<hr>
 <h2 id='k8s_nutshell'><a href='#k8s_nutshell'>K8s in a Nutshell</a></h2>
 <section>
 <p>
@@ -288,6 +289,7 @@ control or workers.
 </ul>
 </section>
 
+<hr>
 <h2 id='interacting_k8s'><a href='#interacting_k8s'>Interacting with K8s</a></h2>
 <section>
 
@@ -429,6 +431,7 @@ later in the book.
 </p>
 </section>
 
+<hr>
 <h2 id='cluster_installation'><a href='#cluster_installation'>Cluster Installation and Upgrade</a></h2>
 <section>
 
@@ -1253,6 +1256,420 @@ with that repository among other things. Popular on organizations using GitOps.
 </p>
 </section>
 
+<h2 id='helm_kustomize'><a href='#helm_kustomize'>Helm and Kustomize</a></h2>
+<section>
+<h3 id='helm'><a href='#helm'>Helm</a></h3>
+<p>
+Helm is a package manager for k8s.  This means that you can use it similar
+to <code>apt</code> or <code>dnf</code> to install full working packages in the
+k8s cluster.
+</p>
+<p>
+Usually a deployment of  a full service in a k8s cluster would involve multiple
+resources, <code>services</code> <code>pods</code> <code>configmaps</code>. It
+would be a bit complicated to deploy all of them using <code>kubectl</code>.
+With helm you can deploy full working solutions with just a few commands.
+</p>
+<p>
+Say you want to deploy jenkins in your cluster. You could just look in the <a
+href="https://artifacthub.io">ArtifactHub</a> for jenkins,  and follow the
+instructions for installing the chart. It typically looks something like the
+following.
+<ul>
+    <li>
+        <p>
+          We first need to add the repo for helm to keep track of it.
+          <pre><code>
+helm repo add jenkins https://charts.jenkins.io
+helm repo update
+          </code></pre>
+        </p>
+    </li>
+    <li>
+        <p>
+        Then you can just install it specifying a name for the release. Do not
+        forget that you are using your <code>kubeconfig</code> configuration so
+        the namespace and cluster you are pointing to will be the target of
+        this operation.
+        <pre><code>
+helm install my-jenkins jenkins/jenkins --version 5.8.25 # helm install [RELEASE_NAME] jenkins/jenkins [flags]
+        </code></pre>
+        </p>
+    </li>
+    <li>
+        <p>
+        It will create all the k8s resources needed for it to work. The
+        cool thing about this is that you can customize it a bit by passing
+        values to certain variables for the package. Say you want to change
+        the admin user, it varies on the package of course but here you can
+        do something like:
+        <pre><code>
+helm install my-jenkins jenkinsci/jenkins --version 4.6.4 \
+    --set controller.adminUser=boss --set controller.adminPassword=password \
+    -n jenkins --create-namespace
+        </code></pre>
+        </p>
+    </li>
+    <li>
+        <p>
+        You can discover a list of all the values too.
+            <pre><code>
+helm show values jenkinsci/jenkins
+            </code></pre>
+        </p>
+    </li>
+    <li>
+        You can list the installed packages
+        <p>
+            <pre><code>
+helm list
+            </code></pre>
+        </p>
+    </li>
+    <li>
+        There is also a simple way to upgrade a release
+        <p>
+            <pre><code>
+helm repo update; # so we have the most up-to-date version
+helm upgrade my-jenkins jenkinsci/jenkins --version 5.8.26
+            </code></pre>
+        </p>
+    </li>
+    <li>
+        Finally you can remove them by just doing the uninstall subcommand
+        <p>
+            <pre><code>
+helm uninstall my-jenkins
+            </code></pre>
+        </p>
+    </li>
+</ul>
+</p>
+<h3 id='kustomize'><a href='#kustomize'>Kustomize</a></h3>
+<p>
+Kustomize allow you to manage multiple k8s manifests in an easy way. It has
+different capabilities.
+<ul>
+    <li>
+        <p>
+            You can build <code>configmaps</code> and other resources out of
+            files.
+        </p>
+    </li>
+    <li>
+        <p>
+            You can patch different values, say the DNS for an application
+            based on different overlays/environments.
+        </p>
+    </li>
+</ul>
+It is really not worth going that much into detail since this will likely not
+come into the certification.
+</p>
+<p>
+Just a few quick things, the heart of this is the
+<code>kustomization.yaml</code> file, there you will list all the resources
+kustomize will use to render the templates.
+</p>
+<p>
+You can also render how the manifests would look without having to apply them
+with
+<pre><code>
+kustomize bulid /path/to/kustomization.yaml # or
+k kustomize /path/to/kustomization.yaml
+</code></pre>
+</p>
+<p>
+Here is a short example on how you can start using this, say to add the same
+namespace to two different manfiests.
+<pre><code>
+% tail -n +1  kustomization.yaml pod.yaml configmap.yaml
+== kustomization.yaml ==
+namespace: kustom
+resources:
+- pod.yaml
+- configmap.yaml
+
+== pod.yaml ==
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: nginx
+  name: nginx
+spec:
+  containers:
+  - image: nginx:1.21.1
+    name: nginx
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+status: {}
+
+== configmap.yaml ==
+apiVersion: v1
+data:
+  dir: /etc/logs/traffic-log.txt #/etc/logs/traffic.log
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  name: logs-config
+</code></pre>
+</p>
+</section>
+<hr>
+<h2 id='workloads'><a href='#workloadse'>Workloads</a></h2>
+<section>
+<p>
+A workload is an application running inside a k8s cluster. Wether your
+application has different components running or just one, you will run it
+inside a set of Pods. A Pod is nothing more than a set of containers.
+</p>
+
+<p>
+Pods have a defined life-cycle, meaning if you kill one or it dies do to some
+issue, it is not going to respawn by itself or anything.
+</p>
+
+<p>
+To make life easier, k8s has a set of different controllers that will help
+manage this pods. Say, always keeping 3 of them alive, even if one is killed,
+spin up another one to take its place. You can use <i>workload resources</i> to
+make this happen. The workload resources will configure these controllers
+depending on what you want to do. We will go more in depth on each, but here is
+a brief intro into each of them.
+<p>
+<ul>
+    <li>
+        <p>
+            <b>Deployment</b> and <b>ReplicaSet</b>, these are good more
+            managing workloads where pods are replaceable/interchangeable,
+            <i>stateless</i> applications.
+        </p>
+    </li>
+    <li>
+        <p>
+           <b>StatefulSet</b>, this will help you run applications where pods
+           do keep track of the state. Useful when mounting Persistent Volumes
+           to different pods, so they stay consistent.
+        </p>
+    </li>
+    <li>
+        <p>
+          <b>DaemonSet</b>, pods that provide some functionality to Nodes,
+          maybe for networking, or to manage the node. These are like daemons
+          that will be assigned to each Node.
+        </p>
+    </li>
+    <li>
+        <p>
+          <b>Job</b> and <b>CronJob</b>, define tasks that will run until
+          completion and then stop.
+        </p>
+    </li>
+</ul>
+
+<h3 id='pods'><a href='#pods'>Pods</a></h3>
+<p>
+A pod is like a set of containers with shared namespaces and shared file
+systems. You can run just one or multiple containers in one Pod.
+</p>
+<h3 id='pods_life'><a href='#pods_life'>A Pod's Lifecycle</a></h3>
+<p>
+Pods are consider ephemeral, pods are created, assigned a unique id (UID),
+scheduled to run to nodes where they will live until their termination. If a
+node dies, the pods that lived there, or were scheduled to live there, will be
+marked for deletion.
+</p>
+<p>
+While a pod is running, <code>kubelet</code> can restart its containers to
+handle some kind of faults.
+</p>
+<p>
+Pods are only scheduled one in their lifetime; assigning a pod to a node is
+called <i>binding</i>, and the process of selecting which node the pod should
+go to is known as <i>scheduling</i>. Once a pod is scheduled to a node they are
+bound until either of them dies.
+</p>
+<p>
+A pod is never "re-scheduled", it is simply killed and replaced by maybe a
+super similar one but the UID will be different.
+</p>
+<p>
+<h4 id='pods_phases'><a href='#pods_phases'>Pod phases</a></h4>
+<p>
+There are several pods phases:
+</p>
+<table>
+    <thead>
+    <tr>
+        <th>Phase</th>
+        <th>Description</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+        <td>Pending</td>
+        <td>
+            The Pod has been accepted by k8s, but one or more containers are
+            not ready to run. This means it might be waiting for scheduling or
+            downloading an image from a registry.
+        </td>
+    </tr>
+    <tr>
+        <td>Running</td>
+        <td>
+            The Pod has been bound to a Node, all the containers have been
+            created. At least one of them is running, or in the process of
+            starting/restarting.
+        </td>
+    </tr>
+    <tr>
+        <td>Succeeded</td>
+        <td>
+            All containers in the Pod have been terminated in success.
+        </td>
+    </tr>
+    <tr>
+        <td>Failed</td>
+        <td>
+            All containers in the Pod have been terminated, but one ore more
+            terminated in failure.
+        </td>
+    </tr>
+    <tr>
+        <td>Unknown</td>
+        <td>
+            We could not get the state of the pod, usually an error with
+            communicating with the Node the pod is running on.
+        </td>
+    </tr>
+    </tbody>
+</table>
+<blockquote>
+<code>CrashLoopBackOff</code> and <code>Terminating</code> are not actually
+<b>phases</b> of a pod. Make sure to not confuse status with phase.
+</blockquote>
+<h4 id='pods_handle_issues'><a href='#pods_handle_issues'>Pods handling issues</a></h4>
+<p>
+Similar to every living thing on this green Earth, a Pod will be presented with
+issues along its time in this world filled with thorns and thistles. Maybe, as
+us, even its own life will depend on how well it is able to solve them. This
+unnecessary biblical de-tour begs the question, how does it handle problems
+with containers?
+</p>
+<p>
+The pods <code>spec</code> has a <code>restartPolicy</code>. This will
+determine how k8s reacts to containers exiting due to errors.
+<ol>
+    <li>
+        <p>
+            <b>Initial Crash</b>, k8s immediately tries to restart it based on
+            the <code>restartPolicy</code>
+        </p>
+    </li>
+    <li>
+        <p>
+            <b>Repeated Crashes</b>, if it keeps failing, it will add an
+            exponential backoff delay for the next restarts
+        </p>
+    </li>
+    <li>
+        <p>
+            <b>CrashLoopBackOff state</b>, this indicates the backoff delay
+            mechanism is in effect.
+
+        </p>
+    </li>
+    <li>
+        <p>
+            <b>Backoff reset</b>, if a container manages to stay alive for a
+            certain duration of time, the backoff delay is restarted.
+        </p>
+    </li>
+</ol>
+</p>
+<p>
+Troubleshooting is its own separated section, but here are some reasons a Pod
+might be <code>CrashLoopBackOff </code>ing.
+<ul>
+    <li>
+        <p>Application errors are causing the container to exit</p>
+    </li>
+    <li>
+        <p>Configuration errors, missing files, or env vars</p>
+    </li>
+    <li>
+        <p>
+            Resources, the container may not have enough memory or cpu to start
+        </p>
+    </li>
+    <li>
+        <p>
+            Healthchecks are failing if the application doesn't start serving
+            in time.
+        </p>
+    </li>
+</ul>
+</p>
+<p>
+How to debug this? Check the <code>logs</code>, <code>events</code>, ensure the
+configuration is set up properly, check resources limits, debug application.
+Maybe even run the image locally, see if it is working fine.
+</p>
+<p>
+A <code>restartPolicy </code> can be <code>Never</code>, <code>Always</code>,
+<code>OnFailure</code>.
+</p>
+
+<h4 id='container_probes'><a href='#container_probes'>Container Probes</a></h4>
+<p>
+A probe is a diagnostic periodically performed by the kubelet. There are three
+types the <code>livenessProbe</code>, <code>readinessProbe</code>,
+<code>startupProbe</code>.
+</p>
+
+<p>
+Pretty self explanatory, maybe the only thing to clarify is that the
+<code>startupProbe</code> indicates if the app inside a container started. All
+the other probes will be disabled until this is done. Usually this one is used
+for containers that take a long time to start.
+</p>
+
+<p>
+And the <code>readinessProbe</code> indicates whether the container is ready to
+respond to requests.
+</p>
+
+<p>
+There are 4 check mechanisms.
+<ol>
+    <li>
+        <p>
+            <code>exec</code>: exec a command inside the container, if
+            successful return <code>0</code>.
+        </p>
+    </li>
+    <li>
+        <p><code>grpc</code>: performs remote call using gRPC.</p>
+    </li>
+    <li>
+        <p>
+            <code>httpGet</code>: makes a http GET request against the pod ip
+            to a given endpoint.
+        </p>
+    </li>
+    <li>
+        <p>
+            <code>tcpSocket</code>: perform  a tcp check, considers successful
+            if the port is open
+        </p>
+    </li>
+</ol>
+</p>
+</section>
+
 <hr>
 <h3 id='table'>~ Table of Contents</h3>
 <ul>
@@ -1328,10 +1745,31 @@ with that repository among other things. Popular on organizations using GitOps.
           <li><a href="#ops">Operator pattern</a></li>
         </ul>
       </li>
+      <li>
+        <a href='#helm_kustomize'>Helm and Kustomize</a>
+        <ul>
+          <li><a href="#helm">Helm</a></li>
+          <li><a href="#kustomize">Kustomize</a></li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+  <li>
+    <a href='#workloads'>Workloads</a>
+    <ul>
+      <li>
+        <a href='#pods'>Pods</a>
+        <ul>
+          <li><a href="#pods_life">A Pod's Lifecycle</a></li>
+          <li><a href="#pods_phases">A Pod's Lifecycle</a></li>
+          <li><a href="#pods_handle_issues">Pods handling issues</a></li>
+          <li><a href='#container_probes'>Container Probes</a></li>
+        </ul>
+      </li>
+      <li><a href='#workload_management'>Workload Management</a></li>
     </ul>
   </li>
 </ul>
 <p><a href='#top'>↑ go to the top</a></p>
-
 </body>
 </html>

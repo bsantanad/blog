@@ -39,6 +39,31 @@
       font-style: italic;
 
     }
+
+    li > details {
+        margin: 0;
+        padding: 0;
+        background-color: white;
+    }
+    li > details[open] {
+        margin: 0;
+        padding: 0;
+        background-color: white;
+    }
+    li > details > * {
+        margin: 0;
+        padding-top: 0;
+        background-color: white;
+    }
+    summary {
+        background-color: white;
+        padding: 0;
+        margin: 0;
+    }
+    summary > * {
+        margin: 0;
+        padding: 0;
+    }
   </style>
 </head>
 <body>
@@ -48,7 +73,7 @@
 <hr>
 <small><i>
 Crated on <time datetime="2025-07-18">July 18, 2025</time>; Last modified on
-<time datetime="2025-08-15">Aug 15, 2025.</time>
+<time datetime="2025-08-18">Aug 18, 2025.</time>
 </i></small>
 <br>
 <small>
@@ -1471,6 +1496,7 @@ a brief intro into each of them.
 </ul>
 
 <h3 id='pods'><a href='#pods'>Pods</a></h3>
+<hr>
 <p>
 A pod is like a set of containers with shared namespaces and shared file
 systems. You can run just one or multiple containers in one Pod.
@@ -1668,6 +1694,106 @@ There are 4 check mechanisms.
     </li>
 </ol>
 </p>
+
+<h3 id='containers'><a href='#containers'>Containers</a></h3>
+
+<h3 id='init_container'><a href='#init_container'>Init Containers</a></h3>
+<p>
+An init container is one (or and array) of containers that will run before your
+main application containers. They will run until completion, meaning they
+cannot live side by side with your main containers. Those are sidecars, which
+we will talk about later.
+</p>
+<p>
+They run sequentially, and if one fails <code>kubelet</code> will restart that
+init container until it succeed, if the <code>restartPolicy</code> is set to
+never. Then when it fails the whole pod will be treated as failed.
+</p>
+<p>
+They have all the fields and features of regular containers, they just do not
+have probes.
+</p>
+<p>
+They are useful to setup different stuff in your application. Like set up
+things in volumes and stuff like that. Maybe download a file or something.
+</p>
+<p>
+Here is an example form the docs where the init container waits for a svc in
+k8s to be up and running before starting these pods containers.
+<pre>
+<code>
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp-pod
+  labels:
+    app.kubernetes.io/name: MyApp
+spec:
+  containers:
+  - name: myapp-container
+    image: busybox:1.28
+    command: ['sh', '-c', 'echo The app is running! && sleep 3600']
+  initContainers:
+  - name: init-myservice
+    image: busybox:1.28
+    command: ['sh', '-c', "until nslookup myservice.$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace).svc.cluster.local; do echo waiting for myservice; sleep 2; done"]
+</code>
+</pre>
+</p>
+
+<h3 id='sidecar_container'><a href='#sidecar_container'>Sidecar Containers</a></h3>
+<p>
+Sidecar Containers are containers that run side by side with the application
+container, they can be used for logging, data sync, monitoring, and so on.
+Typically you only have one <i>application container</i> per pod. For example,
+if you have a web app that requires a web server, you would have you web app in
+the app container and use a sidecar container as the web server.
+</p>
+
+<p>
+The implementation is super simple, just add a <code>restartPolicy</code> to an
+init container and there you have it. The cool thing is that they will still be
+run sequentially, but the one with the <code>restartPolicy</code> will keep
+running.
+</p>
+<p>
+You can also use probes on these containers opposed to regular init containers.
+</p>
+<p>
+When a pod dies, first the app container will be deleted, then the sidecar
+containers on opposed order to what they were spawned on.
+</p>
+<p>
+You can have multiple containers as the main containers of the pod, so when to
+use this. The app containers are meant for executing primary application logic.
+That is why usually you just have one and use sidecars for anything else.
+</p>
+<h3 id='workload_management'><a href='#workload_management'>Workload Management</a></h3>
+<hr>
+<p>
+You applications will run inside pods, the k8s api offers different resources
+to help you manage you them. Say a pod dies, you would not like to have to go
+in the middle of the night and start it again. We can use k8s objects that
+will help us manage them.
+</p>
+<h3 id='replicaset'><a href='#replicaset'>ReplicaSet</a></h3>
+<p>
+A replicaset's purpose is to keep a stable set of replica pods running at any
+given time. You tell it how many and how does the pod look and it will
+remove/create pods to maintain this state.
+</p>
+<p>
+In a replicaset fields you specify a selector, which tells the replicaset how
+to identify pods it can acquire and a number specifying how many pods it should
+be  maintaining.
+</p>
+<p>
+You are not likely to create a replicaset by itself, you usually create higher
+level resources like a Deployment that will use ReplicaSets.
+</p>
+<h3 id='deploy'><a href='#deploy'>Deployment</a></h3>
+<p>
+</p>
 </section>
 
 <hr>
@@ -1759,14 +1885,40 @@ There are 4 check mechanisms.
     <ul>
       <li>
         <a href='#pods'>Pods</a>
-        <ul>
-          <li><a href="#pods_life">A Pod's Lifecycle</a></li>
-          <li><a href="#pods_phases">A Pod's Lifecycle</a></li>
-          <li><a href="#pods_handle_issues">Pods handling issues</a></li>
-          <li><a href='#container_probes'>Container Probes</a></li>
-        </ul>
+        <details>
+          <summary>
+            <a href="#pods_life">A Pod's Lifecycle</a>
+          </summary>
+          <ul>
+            <li><a href="#pods_phases">Pods Phases</a></li>
+            <li><a href="#pods_handle_issues">Pods handling issues</a></li>
+            <li><a href='#container_probes'>Container Probes</a></li>
+          </ul>
+        </details>
+        <details>
+          <summary>
+            <a href="#containers">Containers</a>
+          </summary>
+          <ul>
+            <li><a href="#init_container">Init Containers</a></li>
+            <li><a href="#sidecar_container">Sidecar Containers</a></li>
+          </ul>
+        </details>
       </li>
-      <li><a href='#workload_management'>Workload Management</a></li>
+      <li>
+        <a href='#workload_management'>Workload Management</a>
+        <details>
+          <summary>
+            <a href="#deploy">Deployments</a>
+            <a href="#replicaset">ReplicaSet</a>
+            <a href="#statefulset">StatefulSet</a>
+            <a href="#deamonset">DaemonSet</a>
+            <a href="#jobs">Jobs and CronJobs</a>
+          </summary>
+          <ul>
+          </ul>
+        </details>
+    </li>
     </ul>
   </li>
 </ul>

@@ -73,7 +73,7 @@
 <hr>
 <small><i>
 Crated on <time datetime="2025-07-18">July 18, 2025</time>; Last modified on
-<time datetime="2025-08-18">Aug 18, 2025.</time>
+<time datetime="2025-08-24">Aug 24, 2025.</time>
 </i></small>
 <br>
 <small>
@@ -182,6 +182,7 @@ you call a computer):
       <li>
         These are the nodes that execute the workload in containers
         managed by pods. Worth noting that every worker node needs a
+        <details>
         container runtime engine, to create the containers.
       </li>
     </ul>
@@ -1771,8 +1772,8 @@ That is why usually you just have one and use sidecars for anything else.
 <h3 id='workload_management'><a href='#workload_management'>Workload Management</a></h3>
 <hr>
 <p>
-You applications will run inside pods, the k8s api offers different resources
-to help you manage you them. Say a pod dies, you would not like to have to go
+Your applications will run inside pods, the k8s api offers different resources
+to help you manage them. Say a pod dies, you would not like to have to go
 in the middle of the night and start it again. We can use k8s objects that
 will help us manage them.
 </p>
@@ -1783,17 +1784,163 @@ given time. You tell it how many and how does the pod look and it will
 remove/create pods to maintain this state.
 </p>
 <p>
-In a replicaset fields you specify a selector, which tells the replicaset how
+In a replicaset's fields you specify a selector, which tells the replicaset how
 to identify pods it can acquire and a number specifying how many pods it should
 be  maintaining.
 </p>
 <p>
 You are not likely to create a replicaset by itself, you usually create higher
-level resources like a Deployment that will use ReplicaSets.
+level resources like a Deployment that then will use ReplicaSets.
 </p>
-<h3 id='deploy'><a href='#deploy'>Deployment</a></h3>
+<h3 id='deploy'><a href='#deploy'>Deployments</a></h3>
 <p>
+A deployment manages a set of pods that run an application. You describe the
+desired state for the application, say, <i>how many pods need to be
+available?</i> and the controller will maintain that state.
 </p>
+<p>
+There are some fields worth mentioning in a deployments' manifest. First, the
+<code>spec.replicas</code> field will specify the number of replicas, of
+course. We also have <code>spec.selector</code> which tells the replicaset how
+to find the pods to manage, usually this one will match the label set in the
+<code>spec.template</code> pod template.
+</p>
+<p>
+Once you <code>k apply</code> deployment, there are some commands that
+will come in handy.
+<ul>
+    <li>
+        <p>
+            <code>k get deploy</code> will give you overall information on the
+            deployments; how many replicasets have been created, how many are
+            available, the age.
+        </p>
+    </li>
+    <li>
+        <p>
+            <code>k rollout status deployment/some-deployment</code> will print
+            a message telling you how many replicas have been rollout, and
+            similar stuff.
+        </p>
+    </li>
+    <li>
+        <p>
+            <code>k get rs</code> will print the status for the replicasets
+        </p>
+    </li>
+</ul>
+<p>
+If you update an image from the deployment <code>k set image
+deployment/some-deploy nginx=nginx:latest</code> and do <code>k get rs</code>
+you will see that there are two now. The one with the previous image that now
+marks its pods as 0 and the new one with the pods marked as the
+<code>spec.replicas</code> says.
+</p>
+<p>
+The deployment controller ensures that only an specific number of pods are down
+wile being updated. By default it makes sure that at least <code>3/4</code> of
+the desired number of pods are up. Meaning only <code>1/4</code> can be
+unavailable.
+</p>
+<p>
+When updating, the controller will look for existing replicasets that control
+certain <code>spec.label</code> but do not match the existing
+<code>spec.template</code>, and scale those down. While a new replicaset with
+the new <code>spec.template</code> is scaled up.
+</p>
+<h4 id='deploy_rollback'><a href='#deploy_rollback'>Rollback</a></h4>
+<p>
+If you update a deployment but it is not going the way you wanted, you can
+easily go back to the previous version of your deployment. First you need to
+check the rollout history, to choose what version will you rollback to.
+<pre><code>
+kubectl rollout history deployment/nginx-deployment
+</code></pre>
+You can see more details on a rollout by using the same command but with the
+<code>--revision=n</code> command.
+</p>
+<p>
+If you decide to rollback you can do
+<pre>
+<code>
+kubectl rollout undo deployment/nginx-deployment --to-revision=n
+</code>
+</pre>
+</p>
+
+<h4 id='deploy_scale'><a href='#deploy_scale'>Scale</a></h4>
+<p>
+You can scale the replicas in a deployment with
+<pre><code>
+kubectl scale deployment/nginx-deployment --replicas=10
+</code></pre>
+If Horizontal Pod Autoscaler is setup you can setup it up based on cpu/memory
+usage.
+<pre><code>
+kubectl autoscale deployment/nginx-deployment --min=10 --max=15 --cpu-percent=80
+</code></pre>
+</p>
+
+<h4 id='deploy_strategy'><a href='#deploy_strategy'>Strategy</a></h4>
+<p>
+The <code>spec.strategy</code> field, will tell you the type of strategy used
+to replace old pods by new pods. I can either be, <i>Recreate</i> or
+<i>RollingUpdate</i>. The latter is the default value.
+</p>
+<p>
+If <i>Recreate</i>, all pods are killed before new ones are created.
+</p>
+<p>
+If <i>RollingUpdate</i>, one replicaset is scaled down while a new one is
+scaled up. You can specify <code>maxUnavailable</code> and
+<code>maxSurge</code> to control this.
+<ul>
+    <li>
+        <p>
+            <b>Max Unavailable</b>: tells how many pods can be unavailable
+            during the updating process. If set 30%, the deployment will scale
+            down the old replicaset to 70% of its capacity, and will not scale
+            it further down until the new pods in the new replicaset are ready.
+            Making sure that always at least 70% of the pods are available.
+        </p>
+    </li>
+    <li>
+        <p>
+            <b>Max Surge</b>: this specifies how much the number of pods can go
+            over the limit specified in the replicaset. Say you have 10 pods
+            running and set this to 3; when the upadate starts the controller
+            will scale the total number of pods to 13. If this number is
+            higher, the update will be faster, but at the expense of using more
+            resources.
+        </p>
+    </li>
+</ul>
+</p>
+
+<h3 id='sts'><a href='#sts'>StatefulSets</a></h3>
+<p>
+There are similar to deployments, but they maintain a sticky identity to each
+of the pods they create.
+</p>
+<p>
+You will use stateful sets if you need:
+<ul>
+    <li>
+        <p>
+            If you need stable network identities, meaning, your pods have the
+            same name after (re)scheduling, opposed to a random hash at the end
+            of their name.
+        </p>
+    </li>
+    <li>
+        <p>
+            You want to specify a PVC per pod, and do not have them fight for
+            one pre-defined.
+        </p>
+    </li>
+</ul>
+</p>
+
 </section>
 
 <hr>
@@ -1907,18 +2054,12 @@ level resources like a Deployment that will use ReplicaSets.
       </li>
       <li>
         <a href='#workload_management'>Workload Management</a>
-        <details>
-          <summary>
-            <a href="#deploy">Deployments</a>
-            <a href="#replicaset">ReplicaSet</a>
-            <a href="#statefulset">StatefulSet</a>
-            <a href="#deamonset">DaemonSet</a>
-            <a href="#jobs">Jobs and CronJobs</a>
-          </summary>
           <ul>
+            <li><a href="#replicaset">ReplicaSets</a></li>
+            <li><a href="#deploy">Deployments</a></li>
+            <li><a href="#sts">StatefulSets</a></li>
           </ul>
-        </details>
-    </li>
+      </li>
     </ul>
   </li>
 </ul>

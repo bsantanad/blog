@@ -1769,7 +1769,7 @@ You can have multiple containers as the main containers of the pod, so when to
 use this. The app containers are meant for executing primary application logic.
 That is why usually you just have one and use sidecars for anything else.
 </p>
-<h3 id='workload_management'><a href='#workload_management'>Workload Management</a></h3>
+<h3 id=''><a href='#workload_management'>Workload Management</a></h3>
 <hr>
 <p>
 Your applications will run inside pods, the k8s api offers different resources
@@ -1941,6 +1941,89 @@ You will use stateful sets if you need:
 </ul>
 </p>
 
+<h3 id='resource_management'><a href='#resource_management'>Compute Resource Management</a></h3>
+<p>
+In a pod you can specify how much of a resource (RAM an CPU) a container needs.
+You can set a <i>request</i> of certain amount of resources, and the scheduler
+uses this information to know on which node to put it. You can also set a
+<i>limit</i> on how many resources a container can use, and
+<code>kubelet</code> will make sure the running container does not exceeds
+those.
+</p>
+<p>
+A pod may use more resources than it <i>requested</i>, as long as the node has
+enough of them there will be no issue.
+</p>
+<p>
+<i>Limits</i> work differently though. They are enforced by the linux kernel.
+For <code>cpu</code> they are hard limits, the kernel will restrict access to
+the CPU based on its limit by CPU throttling. For <code>memory</code> the
+kernel uses out of memory (OOM) kills. This does not mean that as soon as the
+container exceeds the memory it is killed, the kernel will only kill it if it
+detects memory pressure.
+</p>
+<p>
+You specify <code>cpu</code> and <code>memory</code> limits/resources using
+specific units. Kuberenetes CPU units, and bytes respectively.
+</p>
+<p>
+Usually you specify the limits at container level
+<pre><code>
+spec.containers[].resources.limits.cpu
+spec.containers[].resources.limits.memory
+spec.containers[].resources.requests.cpu
+spec.containers[].resources.requests.memory
+</code></pre>
+But since <code>v1.32</code> you can also set them a pod level
+<pre><code>
+spec.resources.limits.cpu
+spec.resources.limits.memory
+spec.resources.requests.cpu
+spec.resources.requests.memory
+</code></pre>
+</p>
+
+<h3 id='resource_quotas'><a href='#resource_quotas'>Quotas</a></h3>
+<p>
+You can limit the resources by namespace using a k8s resource called
+<code>ResourceQuota</code>. These are not limited to only <code>memory</code>
+and <code>cpu</code>, since you can limit the amount of objects that can be
+created in a namespace, say only create 10 pods or something like that.
+</p>
+<p>
+Users need to specify the resource limit or request on their workloads if not
+the API may not give permission to create them. This can be a bit painful for
+developers, so you can define <code>LimitRange</code> to set defaults on pods
+that do not specifically set the requirements.
+</p>
+<p>
+Important note on all these, they do not apply to running pods, they only apply
+to new pods. So if you have some deployment and then set a LimitRange expecting
+the pods from that deployment to apply it you are wrong.
+</p>
+<p>
+Here is an example on how they look like:
+<pre><code>
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: cpu-resource-constraint
+spec:
+  limits:
+  - default: # this section defines default limits
+      cpu: 500m
+    defaultRequest: # this section defines default requests
+      cpu: 500m
+    max: # max and min define the limit range
+      cpu: "1"
+    min:
+      cpu: 100m
+    type: Container
+</code></pre>
+<p>
+One last thing, the LimitRange wont check if your limits make sense. If you
+specify a limit less than your request, it will let you fail.
+</p>
 </section>
 
 <hr>
@@ -2059,6 +2142,12 @@ You will use stateful sets if you need:
             <li><a href="#deploy">Deployments</a></li>
             <li><a href="#sts">StatefulSets</a></li>
           </ul>
+      </li>
+      <li>
+        <a href='#resource_management'>Compute Resource Management</a>
+      </li>
+      <li>
+        <a href='#resource_quotas'>Resource Quotas</a>
       </li>
     </ul>
   </li>

@@ -588,7 +588,7 @@ Run "kubectl apply -f [podnetwork].yaml" with one of the options listed at:
 Then you can join any number of worker nodes by running the following on each as root:
 
 kubeadm join ip.control.panel.and:port --token some-cool-token \
-	--discovery-token-ca-cert-hash sha256:some-cool-hash
+    --discovery-token-ca-cert-hash sha256:some-cool-hash
 </code>
 </pre>
 </p>
@@ -736,7 +736,7 @@ v1.21.2; falling back to: stable-1.19
 ...
 You can now apply the upgrade by executing the following command:
 
-	kubeadm upgrade apply v1.19.12
+    kubeadm upgrade apply v1.19.12
 
 Note: Before you can perform this upgrade, you have to update kubeadm to v1.19.12.
 ...
@@ -2025,6 +2025,201 @@ One last thing, the LimitRange wont check if your limits make sense. If you
 specify a limit less than your request, it will let you fail.
 </p>
 </section>
+<hr>
+<h2 id='network'><a href='#network'>Network</a></h2>
+<section>
+<p>
+The k8s network model has several pieces:
+<ul>
+    <li>
+        <p>
+            Each <b>pod</b> had its own unique cluster-wide ip.
+        </p>
+        <p>
+            A pod has its own private network which is shared by all the
+            containers running in the pod; they can talk to each other using
+            <code>localhost</code>.
+        </p>
+    </li>
+    <li>
+        <p>
+            The <b>pod network</b> handles communication between pods. It makes
+            sure pods can communicate with each other regardless of the node
+            they are in. This also allows for deamons in the node to talk to
+            the pods on that node.
+        </p>
+    </li>
+    <li>
+        <p>
+            The <b>Service</b> api, provides a long lived IP address/hostname
+            for a service implemented by pods. The pods can be replaced but the
+            service will stay the same.
+        </p>
+        <p>
+           There is another object called <code>EndpointSlice</code> which
+           provides information about the pods currently working for a service.
+        </p>
+    </li>
+    <li>
+        <p>
+            The <b>Gateway</b> API, (or its predecessor, Ingress), allows you
+            to make a svc accessible to clients outside the cluster.
+        </p>
+    </li>
+    <li>
+        <p><b>NetworkPolicy</b> allows you to control traffic between pods</p>
+    </li>
+</ul>
+</p>
+<h3 id='policies'><a href='#policies'>Network Policies</a></h3>
+<p>
+You can specify how a pod is allowed to communicate to different entities over
+the network using Network Policies. They are dependant on the network plugin
+you used, but you usually can specify which namespaces, which pods, or which IP
+blocks are allowed to send and receive traffic to/from a pod.
+<p>
+<p>
+If you go for the namespaces/pods NetworkPolicy you will use a selector to tell
+what traffic is allowed. If you go with the IP blocks you will define CIDR
+ranges.
+</p>
+<p>
+Two things worth mentioning, the pod will always allow traffic between the node
+and itself, and a pod cannot block access to itself.
+</p>
+<h3 id='pod_iso'><a href='#pod_iso'>Pod Isolation</a></h3>
+<p>
+There are two types of pod isolation, <code>egress</code> and
+<code>ingress</code>. They are declared independently.
+</p>
+<p>
+<ul>
+    <li>
+        <p>
+            <code>egress</code> will tell us who the pod is allowed to send
+            traffic to; meaning who it can speak to.
+        </p>
+    </li>
+    <li>
+        <p>
+            <code>ingress</code> will tell us who the pod is allowed to receive
+            traffic from; meaning who it can listen from.
+        </p>
+    </li>
+</ul>
+</p>
+<p>
+By default a pod will allow all outbound (egress) and inbound (ingress)
+connections. You can create NetworkPolicy resources where the selector matches
+a pod and applies its rules to, they are accumulative.
+</p>
+
+<h3 id='netpol_resource'><a href='#netpol_resource'>NetworkPolicy</a></h3>
+<p>
+Here is an example from the docs
+<pre><code>
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: test-network-policy
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      role: db
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - ipBlock:
+        cidr: 172.17.0.0/16
+        except:
+        - 172.17.1.0/24
+    - namespaceSelector:
+        matchLabels:
+          project: myproject
+    - podSelector:
+        matchLabels:
+          role: frontend
+    ports:
+    - protocol: TCP
+      port: 6379
+  egress:
+  - to:
+    - ipBlock:
+        cidr: 10.0.0.0/24
+    ports:
+    - protocol: TCP
+      port: 5978
+</code></pre>
+</p>
+<p>
+A few fields worth mentioning:
+<ul>
+    <li>
+        <p>
+            <code>spec.podSelector</code>: selects the group of pods to which
+            the policy will apply. An empty one will select all pods in the
+            namespace.
+        </p>
+    </li>
+    <li>
+        <p>
+            <code>spec.policyTypes</code>: this may include Ingress, Egress, or
+            both.
+        </p>
+    </li>
+    <li>
+        <p>
+            <code>spec.egress</code>: list of allowed egress rules. Has a
+            <code>to</code> and <code>ports</code> sections.
+        </p>
+    </li>
+    <li>
+        <p>
+            <code>spec.ingress</code>: list of allowed ingress rules. Has a
+            <code>from</code> and <code>ports</code> sections.
+        </p>
+    </li>
+</ul>
+</p>
+<p>
+Be careful, these two configs are different.
+<pre><code>
+ingress:
+- from:
+  - namespaceSelector:
+      matchLabels:
+        user: alice
+    podSelector:
+      matchLabels:
+        role: client
+</code></pre>
+Here are accepting traffic from pods that are in the namespace with the label
+<code>user: alice</code> <b>and also</b> they need to have the label
+<code>role: client</code>.
+</p>
+<p>
+<pre><code>
+ingress:
+- from:
+  - namespaceSelector:
+      matchLabels:
+        user: alice
+  - podSelector:
+      matchLabels:
+        role: client
+</code></pre>
+Here you are accepting traffic from pods that are in the namespace with that
+label <b>or</b>  from pods that have that label.
+</p>
+<p>
+For the <code>ipBlock</code> the IP blocks you select must be cluster-external
+IPs since Pod IPs are ephemeral.
+</p>
+</section>
+
 
 <hr>
 <h3 id='table'>~ Table of Contents</h3>
@@ -2151,6 +2346,18 @@ specify a limit less than your request, it will let you fail.
       </li>
     </ul>
   </li>
+  <li>
+    <a href='#network'>Network</a>
+    <ul>
+        <li><a href="#policies">Network Policies</a></li>
+        <li><a href="#svcs">Services</a></li>
+        <li><a href="#gateway_api">Gateway API</a></li>
+        <li><a href="#ingress">Ingress</a></li>
+        <li><a href="#corendns">CoreDNS</a></li>
+    </ul>
+  </li>
+  </li>
+  <li>
 </ul>
 <p><a href='#top'>↑ go to the top</a></p>
 </body>

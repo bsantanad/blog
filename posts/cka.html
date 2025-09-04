@@ -2045,8 +2045,8 @@ The k8s network model has several pieces:
         <p>
             The <b>pod network</b> handles communication between pods. It makes
             sure pods can communicate with each other regardless of the node
-            they are in. This also allows for deamons in the node to talk to
-            the pods on that node.
+            they are in. This also allows for node deamons to talk to the pods
+            living on the same node.
         </p>
     </li>
     <li>
@@ -2063,7 +2063,8 @@ The k8s network model has several pieces:
     <li>
         <p>
             The <b>Gateway</b> API, (or its predecessor, Ingress), allows you
-            to make a svc accessible to clients outside the cluster.
+            to make a <code>svc</code> accessible to clients outside the
+            cluster.
         </p>
     </li>
     <li>
@@ -2079,15 +2080,17 @@ you used, but you usually can specify which namespaces, which pods, or which IP
 blocks are allowed to send and receive traffic to/from a pod.
 <p>
 <p>
-If you go for the namespaces/pods NetworkPolicy you will use a selector to tell
-what traffic is allowed. If you go with the IP blocks you will define CIDR
-ranges.
+you go for the namespaces/pods NetworkPolicy you will use a selector to tell
+what traffic is allowed.
+</p>
+<p>
+If you go with the IP blocks you will define CIDR ranges.
 </p>
 <p>
 Two things worth mentioning, the pod will always allow traffic between the node
 and itself, and a pod cannot block access to itself.
 </p>
-<h3 id='pod_iso'><a href='#pod_iso'>Pod Isolation</a></h3>
+<h4 id='pod_iso'><a href='#pod_iso'>Pod Isolation</a></h4>
 <p>
 There are two types of pod isolation, <code>egress</code> and
 <code>ingress</code>. They are declared independently.
@@ -2114,7 +2117,7 @@ connections. You can create NetworkPolicy resources where the selector matches
 a pod and applies its rules to, they are accumulative.
 </p>
 
-<h3 id='netpol_resource'><a href='#netpol_resource'>NetworkPolicy</a></h3>
+<h4 id='netpol_resource'><a href='#netpol_resource'>NetworkPolicy</a></h4>
 <p>
 Here is an example from the docs
 <pre><code>
@@ -2218,8 +2221,167 @@ label <b>or</b>  from pods that have that label.
 For the <code>ipBlock</code> the IP blocks you select must be cluster-external
 IPs since Pod IPs are ephemeral.
 </p>
+<p>
+One last thing worth mentioning, to target a namespace by name you will have to
+use the immutable label <code>kubernetes.io/metadata.name</code>.
+</p>
+<h3 id='svcs'><a href='#svcs'>Services</a></h3>
+<p>
+If you do a deployment to your cluster that serves as a backend for an
+application you want to access over the network. It can get tricky, because the
+pods of a replicaset are ephemeral, their IPs will change all the time. Your
+front end is not expected to update the address every time something happens.
+</p>
+<p>
+This is why we have services, these allow you to select a group of pods using
+label selectors (so if one is killed and spawned it will still be picked up)
+and assign an IP that wont change in your cluster.
+</p>
+<p>
+This way, pods can be killed and respawned but the frontend only has to keep
+track of 1 address.
+</p>
+<p>
+In the service definition you will specify the selector and ports you want to
+use target.
+<pre><code>
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-service
+spec:
+  selector:
+    app.kubernetes.io/name: MyApp
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 9376
+</code></pre>
+</p>
+<p>
+The pods selected by that label will form a resource called
+<code>EndpointSlices</code> which basically will do the mapping, the controller
+for that service will update the virtual IPs if they change.
+</p>
+<p>
+You can define names for ports inside pods, which then you can use as a
+reference in the service.
+</p>
+<p>
+You can also create the services for a deployment  with the <code>k
+expose</code> command.
+</p>
+<h4 id='svc_types'><a href='#svc_types'>Service Types</a></h4>
+<p>
+<ul>
+    <li>
+        <p>
+            <code>ClusterIP</code> makes the service reachable from within the
+            cluster.
+        </p>
+    </li>
+    <li>
+        <p>
+            <code>NodePort</code>, map the service to a port on the node, this
+            will give it outside access.
+        </p>
+    </li>
+    <li>
+        <p>
+            <code>LoadBalancer</code> exposes the service externally using a
+            load balancer. k8s does not offer a load balancing component you
+            will have to use a cloud provider or something.
+        </p>
+    </li>
+    <li>
+        <p>
+            <code>ExternalName</code>, map the serivce to the externalName
+            field, say <code>api.foo.example</code>, this setup the cluster's
+            DNS server to return a CNAME record with that hostname value.
+        </p>
+    </li>
+</ul>
+</p>
+<h3 id='gateway_api'><a href='#gateway_api'>Gateway API</a></h3>
+<p>
+The Gateway API are some k8s resources that provide traffic routing, and make
+network services available. They are role-oriented, meaning each level of
+resource is supposedly manage by different personas, infra engineer, cluster
+admin, and developers. Here is a list of the 3 levels.
+<ul>
+    <li>
+        <p>
+            <code>GatewayClass</code>: these are managed by the infra engineer,
+            they are similar to a <code>StorageClass</code> as in they are not
+            limited to namespaces, they are cluster-scoped, and usually given
+            by the cloud provider. This is how the cloud provider handles
+            requests from the outside world.
+        </p>
+        <p>
+            They are as simple as this:
+            <pre><code>
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: example-class
+  spec:
+    controllerName: example.com/gateway-controller
+            </code></pre>
+        </p>
+    </li>
+    <li>
+        <p>
+            <code>Gateway</code>: these  describe how traffic can be translated
+            to Services within the cluster.
+<pre><code>
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: example-gateway
+spec:
+  gatewayClassName: example-class
+  listeners:
+  - name: http
+    protocol: HTTP
+    port: 80
+</code></pre>
+            This basically is saying, create a gateway using the class
+            specified there, and listen on port <code>80</code>.
+        </p>
+    </li>
+    <li>
+        <p>
+            <code>HTTPRoute</code>, tells the behaviour of http requests from
+            the gateway listener.
+<pre><code>
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: example-httproute
+spec:
+  parentRefs:
+  - name: example-gateway
+  hostnames:
+  - "www.example.com"
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /login
+    backendRefs:
+    - name: example-svc
+      port: 8080
+</code></pre>
+            Here we are telling the gateway we just created, that if in the
+            <code>Host:</code> of the request you find
+            <code>www.example.com</code> and that the path is
+            <code>/login</code> then you should use <code>example-svc</code> on
+            port 8080
+        </p>
+    </li>
+</ul>
+</p>
 </section>
-
 
 <hr>
 <h3 id='table'>~ Table of Contents</h3>

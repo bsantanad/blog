@@ -2381,6 +2381,49 @@ spec:
     </li>
 </ul>
 </p>
+<h3 id='ingress'><a href='#ingress'>Ingress</a></h3>
+<p>
+An Ingress is an object that manges external access to a <code>svc</code>.
+Here you can define a hostname, tls among other things.
+</p>
+<p>
+To make them work in your cluster you need to first have an Ingress Class,
+there are a few you can choose from like <a
+href="https://kubernetes.github.io/ingress-nginx/user-guide/basic-usage/">ingress-nginx
+controller</a>.
+</p>
+<p>
+The imperative way for creating one is actually a good way to understand them
+to. Look at the command:
+<pre><code>
+k create ing website-api --rule='website.com/api=my-svc:8080'
+</code></pre>
+The rule part is will tell the cluster that if a request gets, where the host
+is <code>webiste.com</code> and the path is <code>/api</code> it should map it
+to the <code>svc</code> called <code>my-svc</code> on port <code>8080</code>.
+Basically <code>host/path=service:port</code>.
+</p>
+<p>
+In that example we are not specifying <code>tls</code>, but you can do it by
+pointing to a secret of that type.
+</p>
+<p>
+There are some path types, like if the <code>/api</code> you specified should
+be a exact match (<code>Exact</code>) or can be a prefix
+(<code>Prefix</code>)and stuff like that.
+</p>
+<h3 id='coredns'><a href='#coredns'>CoreDNS</a></h3>
+<p>
+You can talk with pods and services within the cluster using its dns. It is as
+simple as following this structure
+<code>name.namespace.type.cluster.local</code>
+</p>
+<p>
+In order to do this, k8s runs a DNS server implementation called CoreDNS, if
+you get the pods from <code>kube-system</code> you will be able to see the pod
+that is running this. The config is in a <code>cm</code> called coredns in the
+same namespace.
+</p>
 </section>
 
 <hr>

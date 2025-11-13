@@ -2425,6 +2425,125 @@ that is running this. The config is in a <code>cm</code> called coredns in the
 same namespace.
 </p>
 </section>
+<hr>
+<section>
+<h2 id='storage'><a href='#storage'>Storage</a></h2>
+<p>
+Ways to provide ephemeral and long term storage to pods.
+</p>
+<h3 id='volumes'><a href='#volumes'>Volumes</a></h3>
+<p>
+Volumes are used for managing access to a container file system in the pod
+definition. There are ephemeral volumes, where the volume will be destroyed as
+soon as the pod is killed. And there are persistent volumes, which will live
+even if the pod is destroyed, since usually they are stored somewhere else.
+</p>
+<h3 id='storage_classes'><a href='#storage_classe'>Storage Classes</a></h3>
+<p>
+An <code>StorageClass</code> object provide a way for administrators to
+describe the classes the offer. These classes might be mapped to different
+backup policies and so on.
+</p>
+<p>
+When creating one, one must pay attention to the <code>provisioner</code>,
+<code>parameters</code>, <code>reclaimPolicy</code> fields.
+<ul>
+    <li>
+        <p>
+            <code>provisioner</code>: determines the volume plugin used for
+            provisioning <code>pv</code>s
+        </p>
+    </li>
+    <li>
+        <p>
+            <code>parameters</code>: different parameters that describe the
+            volume, this is tied to the provisioner.
+        </p>
+    </li>
+    <li>
+        <p>
+            <code>reclaimPolicy</code>: this tells the cluster what to do with
+            a volume when a user is done with it.
+            <ul>
+                <li>
+                    <p>
+                        <b>Retain</b>: will not delete the stuff in the volume,
+                        needs to be done manually.
+                    </p>
+                </li>
+                <li>
+                    <p>
+                        <b>Delete</b>: removes the <code>pv</code> defined in
+                        the k8s cluster, and the storage asset in the external
+                        infra
+                    </p>
+                    <p>
+                        This is the default if no specified.
+                    </p>
+                </li>
+            </ul>
+        </p>
+    </li>
+</ul>
+</p>
+<h3 id='pv'><a href='#pv'>Persistent Volumes</a></h3>
+<p>
+There are two resources <i>PersistentVolume</i> and
+<i>PersistentVolumeClaim</i>. The first is a cluster scoped object provisioned
+by the admin or dynamically provisioned using Storage Classes. The latter is
+getting a chunk of the first one.
+</p>
+<p>
+What you attach to a pod would be the <code>pvc</code>, the claim to the
+persistent volume. In the claim you can request size and access modes, meaning
+how the claim will be mounted.
+</p>
+<p>
+The access modes are:
+<ul>
+    <li>
+        <p>
+            <code>ReadWriteOnce</code>: mounted as rw by a single node,
+            multiple pods in the same node still can access it.
+        </p>
+    </li>
+    <li>
+        <p>
+            <code>ReadOnlyMany</code>: the volume can be mounted as read only
+            by many nodes
+        </p>
+    </li>
+    <li>
+        <p><code>ReadWriteMany</code>: rw by many nodes</p>
+    </li>
+    <li>
+        <p>
+            <code>ReadWriteOncePod</code>: rw by a single pod, and ensure only
+            one pod can access the <code>pvc</code>
+        </p>
+    </li>
+</ul>
+</p>
+</section>
+<section>
+<h2 id='exercises'><a href='#exercises'>Exercises</a></h2>
+<p>
+Here are some exercises to practice what we have learned.
+</p>
+<p>
+<ul>
+    <li>
+        <p>
+            Create a service account called <code>robert</code>, mount it to a
+            pod with image <code>busybox:latest</code>, and use it to
+            <code>curl</code> all the secrets of the k8s cluster, from inside
+            the pod.
+        </p>
+    </li>
+</ul>
+</p>
+
+</section>
 
 <hr>
 <h3 id='table'>~ Table of Contents</h3>
@@ -2561,8 +2680,14 @@ same namespace.
         <li><a href="#corendns">CoreDNS</a></li>
     </ul>
   </li>
-  </li>
   <li>
+    <a href='#storage'>Storage</a>
+    <ul>
+        <li><a href="#volumes">Volumes</a></li>
+        <li><a href="#storage_classes">Storage Classes</a></li>
+        <li><a href="#pv">Persistent Volumes</a></li>
+    </ul>
+  </li>
 </ul>
 <p><a href='#top'>↑ go to the top</a></p>
 </body>

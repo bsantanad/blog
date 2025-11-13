@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="/static/water.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="UTF-8">
+    <title>async messaging</title>
+    <link rel="stylesheet" href="/static/highlight.min.css">
+    <script src="/static/highlight.min.js"></script>
+    <script>hljs.highlightAll();</script>
+    <style>
+        body {
+            font-family: open sans, "SF Pro Display", system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue";
+            max-width: 960px;
+            margin: 0 auto;
+        }
+        h2 > a {
+            color: black;
+            text-decoration: none;
+        }
+        h2 > a:hover {
+            text-decoration: underline;
+        }
+        h2 > a:visited {
+            color: black;
+        }
+
+        a:visited {
+            color: blue;
+        }
+
+        .important {
+            background-color: lightgray;
+            padding: 1em
+        }
+
+        .chapter {
+            font-style: italic;
+
+        }
+    </style>
+</head>
+<body>
+<a href='/'>
+    < back home
+</a>
+<hr>
+<small><i>
+Crated on <time datetime="2025-11-12">Nov 12, 2025</time>;
+<br>
+Notes on oreilly's Learning OpenTelemetry book
+</i></small>
+<h1 id='top'>~ OpenTelemetry</h1>
+<a href='#table'>table of contents</a>
+<p>
+Let me steal the quote with which the first chapter starts.
+</p>
+
+<blockquote>
+History is not the past but a map of the past, drawn from a particular point
+of view, to be useful to the modern traveler.
+<br>
+<b>Henry Glassie, Historian</b>
+</blockquote>
+
+<p>
+Engineers nowadays have to identify and mitigate issues on their applications
+before there is a meltdown, meaning we cannot just wait for the system to fail
+and do a postmortem. This is why it is important to not only have the data
+stored somewhere, but we need to know when something is going to happen too.
+</p>
+
+<p>
+The data needs to be <i>correlated</i> organized, ready to be analyzed by
+computers. OpenTelemetry does this. It turns individual logs, metrics and
+traces into an understandable graph of information.
+</p>
+
+<h3 id='obs-term'>Glossary</h3>
+<p>
+In the book they focus on observability of distributed systems. They define a
+<i>distributed system</i> as,
+</p>
+<blockquote>
+A system whose components are located on different networked computers that
+communicate and coordinate their actions by passing messages to on another.
+</blockquote>
+
+<p>
+Meaning that not only your microservice app, is a distributed system but your
+monolith that talks to an API to get the weather or something.
+</p>
+
+<p>
+There are two components for distributed systems (at a high level of course):
+</p>
+<ul>
+    <li>
+        <b>Resources</b>
+        <p>
+            Physical (servers, ram, cpu, nics) and logical (api endpoints,
+            dbs).  Basically everything that constructs the system.
+        </p>
+    </li>
+    <li>
+        <b>Transactions</b>
+        <p>
+            Requests that orchestrate the resource to achieve something,
+            usually done by the user. (booking a flight, loading a website)
+        </p>
+    </li>
+</ul>
+
+<p>
+So, <i>how do we observe a distributed system</i>? Well, it needs to emit
+<i>telemetry</i>. Telemetry is data that describes what your system is doing or
+what is happening inside it. Without this the system is a black box.
+</p>
+
+<p>There are two types of telemetry.</p>
+
+<ul>
+  <li>
+    <strong>User telemetry</strong>
+    <p>
+        How the user interacts with a system. How long did he/she hovered over
+        the "buy now" button.
+    </p>
+  </li>
+  <li>
+    <strong>Performance telemetry</strong>
+    <p>
+      Statistics about how the system components are behaving. How long it took
+      for the button to load.
+    </p>
+  </li>
+</ul>
+
+<p>
+  Behind telemetry, there are different types of signals, tbh I did not fully
+  get this part, but I think that a signal could be a log in an application,
+  another one the cpu usage of the system, and so on.
+</p>
+
+<p>
+Each signal now has two parts (feel overloaded with terms already?)
+</p>
+
+<ol>
+  <li>
+    <strong>Instrumentation</strong>
+    <p>Code that emits the data</p>
+  </li>
+  <li>
+    <strong>Transmission system</strong>
+    <p>
+      Responsible for sending the data over the network to an analysis tool.
+    </p>
+  </li>
+</ol>
+
+<p>
+  It is important to mention that the system that emits the data and the system
+  that analyzes the data are separate from each other.
+</p>
+
+<p>
+  <i>Telemetry</i> is the data itself. <i>Analysis</i> is
+  what you do with the data.
+</p>
+
+<p><strong>Telemetry + Analysis = Observability</strong></p>
+
+<h3 id='brief-hist'>A Brief History of Telemetry</h3>
+
+<p>
+  It is called telemetry because the first remote diagnostic system transmitted
+  data over telegraph lines. It was first developed to monitor power plants and
+  public power grids. (Which are in fact distributed systems)
+</p>
+
+<p>
+  The first form of telemetry was <i>logging</i>. Logs are text based messages
+  that tell you something that happened in the system. Devs improved how to
+  store and search these logs.
+</p>
+
+<p>
+  At the end of the day, logs are just recorded events. One might say that
+  there is a file that could not be created because a system does not have
+  space. This is cool, but wouldn't it be better to track the storage too?
+  Those are metrics.
+</p>
+
+<p>
+  <i>Metrics</i>, are a compact representation of system state, say, memory,
+  cpu usage, number of logged users.
+</p>
+
+<p>
+    A third form of telemetry came, <i>distributed tracing</i>. Instead of just
+    tracking events (as logs) this tries to track whole operations, when it
+    starts and when it ends, as well as on which computer it happened. Their
+    usefulness was limited due to the amount of resources this type of systems
+    need.
+</p>
+
+<h3 id='three-tabs'>The Three Browser Tabs of Observability</h3>
+
+<p>The three primary forms of telemetry are</p>
+<ul>
+  <li>logs</li>
+  <li>metrics</li>
+  <li>traces</li>
+</ul>
+
+<p>
+  Usually, the solutions for each are developed as isolated systems, you have a
+  system for <b>log</b> collection, transmission and analysis, a different one
+  for <b>metric</b> collection, transmission and analysis. These systems would
+  not talk to each other, and would be isolated. This is not ideal.
+</p>
+
+<p>
+  <i>Why is this not ideal?</i> Since they do not know about each other, it
+  becomes hard to find correlations between them.
+</p>
+<p>
+  Systems do not have issues that are scoped to just logs or metrics. Since
+  systems are composed of <i>transactions</i> and <i>resources</i>, they can
+  only have <i>transactions</i> and <i>resources</i> issues, they do not limit
+  themselves to what you are tracking with logs, or with metrics, you need the
+  context.
+
+</p>
+<p>
+  Telemetry comes handy here, you can use <i>metrics</i>, <i>logs</i> and
+  <i>traces</i> to understand your system. Say, for example, logs and traces
+  can help you reconstruct a transaction, metrics what was happening at an
+  specific moment in time; useful observations do not come from isolated data
+  points, we need the context/correlation of these telemetry forms.
+</p>
+<p>
+  The way we find what is wrong with a system is by seeing how these forms
+  interact with each other.
+</p>
+<p>
+  So if your 3 systems are vertically build, you need to be switching between
+  these "tabs" to try and correlate them. Which is not an easy way to find the
+  issue.
+</p>
+
+<p>
+  OpenTelemetry solves this issue, in it, the forms are not standalone
+  products,  they become a "<i>single braid of data</i>"
+</p>
+<img src="/static/img/open-braid.png">
+<br>
+<small>
+The image is from the book, I am not intending to infringe any copyright
+thingy.
+</small>
+
+<h2 id='otel-overview'>OpenTelemetry Overview</h2>
+
+<h3 id='primary-obs-signals'>Primary Observability Signals</h3>
+<p>
+Instrumentation is the process of adding observability code to a service, there
+are two types.
+</p>
+<ul>
+    <li>
+        <b>White Box</b>
+        <p>You literally modify the code to generate signals</p>
+    </li>
+    <li>
+        <b>Black Box</b>
+        <p>
+          You use an agent to collect the signals without any need to touch the
+          code
+        </p>
+    </li>
+</ul>
+<p>
+OpenTelemetry concerns itself with 3 signals. (Which are the telemetry forms
+we were discussing previously).
+<ol>
+    <li>
+        <p>traces</p>
+    </li>
+    <li>
+        <p>metrics</p>
+    </li>
+    <li>
+        <p>logs</p>
+    </li>
+</ol>
+Let us go over each one, and describe them a bit more.
+</p>
+<h4>Traces</h4>
+<p>
+A trace is a way to  think about <i>units of work</i> in a distributed system.
+What this mean  is that they represent a full process in your system, from
+beginning to end.
+</p>
+<p>
+The book suggests to think about it as,
+<blockquote>
+A set of log statements that follow a well-defined schema
+</blockquote>
+</p>
+<p>
+Each trace is a collection of related logs, called <i>spans</i>
+</p>
+<h4>Metrics</h4>
+<p>
+Metrics record the system state. These refers to information like memory, cpu
+usage, number of users logged in to the system, stuff like that.
+</p>
+<p>
+They are cheap and accurate, the issue is that it is hard  to correlate them
+with stuff that is happening in the end-user specific transactions.
+</p>
+<p>
+OpenTelemetry metrics have semantic meaning, for example, a request recording
+the size of the payload.
+</p>
+<p>
+OpenTelemetry also allow for metrics to be linked with other signals, so they
+can have more context.
+</p>
+<h4>Logs</h4>
+<p>
+These are the most basic way for a computer to tell you what it is doing.
+OpenTelemetry tries to adapt to whatever you are already using.
+</p>
+<p>
+What OpenTelemetry adds to the logs is that it gives context with traces and
+metrics. So they do not happen in a vacuum but tell a story.
+</p>
+<h3 id='obs-context'>Observability Context</h3>
+<p>
+A signal will give you some information about a record that happen but it would
+be useless without <i>context</i>.
+</p>
+<p>
+Context is what make the signals relevant. There are three types of contexts in
+OpenTelemetry
+<ul>
+    <li>
+        <p>Time</p>
+    </li>
+    <li>
+        <p>Attributes</p>
+    </li>
+    <li>
+        <p>Context Object itself</p>
+    </li>
+</ul>
+</p>
+<h4>The Context Layer</h4>
+<p>
+There is an OpenTelemetry context specification that dictates how
+<i>context</i> is sent between two parts of the system.
+</p>
+<p>
+Any service with OpenTelemetry tracing enables will create and use data to pass
+this context to the next service, process or whatever follows in the pipeline.
+</p>
+<p>
+<b>Propagators</b> are how the data between components is actually sent. When a
+request starts OpenTelemetry will assign and id that will travel with the
+request through the whole process to help it keep this context.
+</p>
+<h4>Attributes and Resources</h4>
+<p>
+Every piece of telemetry in OpenTelemetry has attributes. They are simply
+key-value pairs that describe something about that piece of telemetry.
+</p>
+<p>
+The keys most be unique, and the max number of attributes is 128 due to
+resource constrains. (See <a
+href="https://www.victorpierre.dev/learning/metrics/prometheus/high_cardinality/">Cardinality
+Explosion</a> for more info.)
+</p>
+<p>
+Resources are like attributes but they are immutable, once created they cannot
+be modified.
+</p>
+<h4>Semantic Conventions</h4>
+<p>
+I think there are like a standard of keys and values (attributes) for
+OpenTelemetry, to not be super messy when using different cloud providers,
+runtime, stuff like that.
+</p>
+<h4>Semantic Conventions</h4>
+<p>
+They have a protocol (OpenTelemetry Protocol <i>OTLP</i>) that offers a single
+wire format. Which is fancy speak for how is data stored and sent across the
+network.
+</p>
+<h3 id='table'>~ table of contents</h3>
+<ul>
+  <li>
+    <a href='#top'>Introduction</a>
+    <ul>
+      <li>
+        <a href='#obs-term'>Glossary</a>
+      </li>
+      <li>
+        <a href='#brief-hist'>A Brief History of Telemetry</a>
+      </li>
+      <li>
+        <a href='#three-tabs'>The Three Browser Tabs of Observability</a>
+      </li>
+    </ul>
+  </li>
+  <li>
+    <a href='#otel-overview'>OpenTelemetry Overview</a>
+    <ul>
+      <li>
+        <a href='#primary-obs-signals'>Primary Observability Signals</a>
+        <a href='#obs-context'>Observability Context</a>
+      </li>
+    </ul>
+  </li>
+</ul>
+
+<p><a href='#top'>↑ go to the top</a></p>
+
+</body>
+</html>

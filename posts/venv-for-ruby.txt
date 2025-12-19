@@ -1,0 +1,55 @@
+If you are coming from python to ruby, you might miss just setting up a simple
+virtual environment for you packages, without having to worry about versions
+colliding for different packages in different projects.
+
+This is my attempt of doing something similar in ruby.
+
+There is this thing called rbenv, which is supposed to let you select different
+versions of ruby for different projects. You can `brew` install it, or trust
+and just execute a curl | sh command.
+
+https://rbenv.org
+
+Keep in mind that before installing any version or whatever you will have to
+make sure you have installed  the pre-requisite packages for ruby to work.
+
+https://github.com/rbenv/ruby-build/wiki
+
+Once you have that install, you can list the available versions of ruby with
+
+```
+rbenv install -l
+```
+
+Then choose one and install it.
+
+rbenv install 3.4.8
+
+I pray to god that you are not using RHEL 8 but if you are, you might need to
+install a yaml package, the thing is that the yaml package is not in the
+repositories that are used by default, so you need to add it.
+
+```
+sudo subscription-manager repos --enable codeready-builder-for-rhel-8-x86_64-rpms
+```
+
+Now, with some luck, you will be able to go to the dir where you want your
+project to live and just run:
+```
+rbenv local 3.4.8
+```
+
+Then 
+```
+bundle init
+```
+
+Add your gems to the Gemfile and be good to go!
+
+```
+bundle build
+```
+
+Good luck!
+
+

@@ -1,0 +1,40 @@
+sap btp
+-------
+
+(formerly sap cloud platform)
+
+sap btp is the platform as a service solution that sap provides, they rent you
+hardware operated by cloudfoundry or kyma (this is the OS that will be deployed
+in the hw), and you can deploy whatever you want there; they also give you sap
+services (sap hana db, sap uaa, etc) which you can connect with the cluster.
+
+
+overview and arch
+=================
+
+Cloudfoundry
+------------
+
+TL;DR it provides a huge level of abstraction for the developer to only push
+its app and have it running, without having to worry to much about infra.
+
+You install cloudfoundry in all the hw of your cluster. Like installing
+`kubelet` in the machines, having an admin, workers and so on. The installation
+is out of the scope of this text.
+
+When you push an application to the cluster, cloudfoundry will create a runtime
+environment in the cluster for the app to run.  It basically creates a
+container that is called "Cell" in this context.
+
+You can also connect SAP services to the cells.
+
+Kyma
+----
+
+You deploy k8s in your cluster, kyma is deployed on top k8s, kyma extends the
+applications running inside the pods. It gives them monitoring or
+authentication, and so on.
+
+kyma gives and "application connector" for the app in your pod to be able to
+trigger serverless functions, and connect with 3rd party or SAP services.
+

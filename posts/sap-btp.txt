@@ -38,3 +38,53 @@ authentication, and so on.
 kyma gives and "application connector" for the app in your pod to be able to
 trigger serverless functions, and connect with 3rd party or SAP services.
 
+---
+
+Create a BTP trial account, open cockpit.
+
+
+account management
+==================
+
+There is a global account, inside that there are subaccounts  and inside that
+there are spaces, inside those we have the applications.
+
+- global account
+  - these are for business administration purposes
+  - 1 to 1 with the license you purchased
+  - Basically here you buy _quotas_ which then you divide internally between
+    teams/projects/orgs.
+- subaccount
+  - this is where you will create your PaaS env, cloudfoundry, kyma, and so on.
+  - These are created in one region only.
+- space
+  - where you application is hosted.
+
+You can go to "Entitlements" to see the services your subaccounts have access
+to, it will tell you in "units" say you have "1 unit" of "SAP HANA Cloud" this
+means you can only create 1 of it. These are defined by the license in the
+global account.
+
+On each Space you can see the Services you want to add to your applications.
+Like you look for the service in the marketplace and add it to your space. Then
+you can manage it. Say you create a postgresql db, after creating it you can
+see the credentials and all that.
+
+org level
+---------
+
+There will be one or many global accounts (which are tied to the leasing) that
+will have multiple subaccounts. 
+
+You can divide the subaccounts by teams, so each team has a one or more
+subaccounts. Say you have a finance team, they can have 3 subaccounts, one for
+dev, qa and prod.
+
+Inside each subaccount you will have different spaces for different
+applications.
+
+
+
+hands-on
+========
+

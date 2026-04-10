@@ -74,7 +74,7 @@ org level
 ---------
 
 There will be one or many global accounts (which are tied to the leasing) that
-will have multiple subaccounts. 
+will have multiple subaccounts.
 
 You can divide the subaccounts by teams, so each team has a one or more
 subaccounts. Say you have a finance team, they can have 3 subaccounts, one for
@@ -103,14 +103,14 @@ cf version 8.18.0+fad4bcb.2026-03-04
 ```
 
 To login you go to the subaccount, under the cloudfoundry info and pass it
-along.  
+along.
 ```
 % cf login -a 'https://api.cf.us10-001.hana.ondemand.com' \ # endpoint
     -o '156c6d83trial'  \ # org
     -s dev  \ # space
-    -u '' # your email probably 
+    -u '' # your email probably
 ```
-It will also ask you for your password 
+It will also ask you for your password
 
 ```
 API endpoint:   https://api.cf.us10-001.hana.ondemand.com
@@ -126,9 +126,9 @@ buildpacks
 a buildpack is software that will check some source code and transform it into
 runnable artifacts. It will analyse and check the best way to build it.
 
-You can list the available ones with 
+You can list the available ones with
 ```
-% cf buildpacks            
+% cf buildpacks
 position   name                                stack        enabled   locked   state   filename                                             lifecycle
 1          staticfile_buildpack                cflinuxfs4   true      false    READY   staticfile_buildpack-cached-cflinuxfs4-v1.6.35.zip   buildpack
 2          java_buildpack                      cflinuxfs4   true      false    READY   java_buildpack-cached-cflinuxfs4-v4.77.0.zip         buildpack
@@ -142,9 +142,89 @@ position   name                                stack        enabled   locked   s
 cf apps (kind of k8s `get pods/deploy`?)
 -------
 
-remember you are logged into an space
+remember you are logged into an space, most of this are similar to k8s stuff
+
 ```
 cf apps # list apps
 cf start|stop <app-name> # guess what it does
 cf logs <app-name> (--recent)
+cf scale <app-name> -i <number of instances>
 ```
+
+
+Deploy an app
+=============
+
+You can deploy an app in different ways, the simplest one is inside your app
+repo just use
+
+```
+cf push <name of app>
+```
+
+cf will create the buildpack necessary.
+
+You can create a `manifest.yaml` to setup how you want your app to run, like to
+set up specific stuff to overwrite.
+
+Here is an example of a simple manifest.yaml
+```
+applications:
+  - name: my-node-app-m-01
+    memory: 256M
+    path: ./
+    buildpacks:
+      - nodejs_buildpack
+```
+
+
+mta.yml (sap specific)
+----------------------
+
+There is this SAP specific way of deploying an application, it is helpful
+because this is a good way to bind different sap services to your application.
+
+You need to install a plugin onto `cf` in order to use it.
+```
+cf add-plugin-repo CF-Community https://plugins.cloudfoundry.org
+cf install-plugin -f multiapps
+```
+After this you will have the `deploy` command available.
+```
+cf deploy
+```
+
+First we need to package the application, this is done with the mta builder
+tool, you need to install it.
+https://sap.github.io/cloud-mta-build-tool/download/
+
+After that you create a mta.yaml file, here is a simple example:
+```
+ID: d-01.demo.sample
+_schema-version: 3.3.0
+version: 0.0.1
+
+modules:
+  - name: my-node-app-01
+    type: application
+    path: ./
+    parameters:
+      buildpacks:
+        - nodejs_buildpack
+      memory: 512M
+      tasks: # stuff to run when the app is put in cloudfoundry
+        - name: task-abc-1
+          command: npm install
+```
+
+
+Then you can create the package with `mbt build`, now a new directory will be
+created called mta_archives, if  you look inside you will find a `mtar` file,
+which is your app with some extra files.
+
+You can deploy the `mtar` file with
+
+```
+mta deploy mta_archives/your-file.mtar
+```
+This will talk with BTP upload the file, and deploy whatever you defined there.

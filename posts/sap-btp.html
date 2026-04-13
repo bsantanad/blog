@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="/static/tty.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="UTF-8">
+    <title>sap btp</title>
+    <link rel="stylesheet" href="/static/highlight.min.css">
+    <script src="/static/highlight.min.js"></script>
+    <script>hljs.highlightAll();</script>
+    <style>
+        body {
+            margin: 0 auto;
+            padding: 1em;
+            max-width: 80ch;
+        }
+        p {
+            margin-top: 1em;
+            margin-bottom: 1em !important;
+        }
+        h1, h2, h3 {
+            margin-top: 1.5em !important;
+            margin-bottom: 0.5em !important;
+        }
+        ul, ol {
+            margin-bottom: 1em !important;
+        }
+        li {
+            margin-bottom: 0.5em !important;
+        }
+    </style>
+</head>
+<body>
+<ul>
+    <li>
+        <a style='padding-bottom: 1em;' href='/'>
+          🏡 home
+        </a>
+    </li>
+    <li>
+        <a href='/posts/sap-btp.txt'>txt</a>
+    </li>
+</ul>
+<p>
+<a href='#table'>table of contents</a>
+</p>
+<p>
+<small style='margin-top: 1em;'><i>
+Crated on <time datetime="2026-03-31">March 31, 2026</time>;
+</p>
+</i></small>
+<h1 id='top'>sap btp</h1>
+<p>
+(formerly sap cloud platform)
+</p>
+<p>
+sap btp is the platform as a service solution that sap provides, they rent
+you hardware operated by cloudfoundry or kyma (this is the OS that will be
+deployed in the hw), and you can deploy whatever you want there; they also
+give you sap services (sap hana db, sap uaa, etc) which you can connect with
+the cluster.
+</p>
+
+<h2 id='overview-arch'>overview and arch</h2>
+
+<h3 id='cloudfoundry'>cloudfoundry</h3>
+<p>
+TL;DR it provides a huge level of abstraction for the developer to only push
+its app and have it running, without having to worry to much about infra.
+</p>
+<p>
+You install cloudfoundry in all the hw of your cluster. Like installing
+<code>kubelet</code> in the machines, having an admin, workers and so on. The
+installation is out of the scope of this text.
+</p>
+<p>
+When you push an application to the cluster, cloudfoundry will create a
+runtime environment in the cluster for the app to run. It basically creates a
+container that is called "Cell" in this context.
+</p>
+<p>
+You can also connect SAP services to the cells.
+</p>
+
+<h3 id='kyma'>kyma</h3>
+<p>
+You deploy k8s in your cluster, kyma is deployed on top k8s, kyma extends the
+applications running inside the pods. It gives them monitoring or
+authentication, and so on.
+</p>
+<p>
+kyma gives and "application connector" for the app in your pod to be able to
+trigger serverless functions, and connect with 3rd party or SAP services.
+</p>
+<p>
+Create a BTP trial account, open cockpit.
+</p>
+
+<h2 id='account-mgmt'>account management</h2>
+<p>
+There is a global account, inside that there are subaccounts and inside that
+there are spaces, inside those we have the applications.
+</p>
+<ul>
+    <li>
+        <p><i>global account</i></p>
+        <ul>
+            <li><p>these are for business administration purposes</p></li>
+            <li><p>1 to 1 with the license you purchased</p></li>
+            <li>
+                <p>Basically here you buy <i>quotas</i> which then you divide
+                internally between teams/projects/orgs.</p>
+            </li>
+        </ul>
+    </li>
+    <li>
+        <p><i>subaccount</i></p>
+        <ul>
+            <li>
+                <p>this is where you will create your PaaS env, cloudfoundry,
+                kyma, and so on.</p>
+            </li>
+            <li><p>These are created in one region only.</p></li>
+        </ul>
+    </li>
+    <li>
+        <p><i>space</i></p>
+        <ul>
+            <li><p>where you application is hosted.</p></li>
+        </ul>
+    </li>
+</ul>
+<p>
+You can go to "Entitlements" to see the services your subaccounts have access
+to, it will tell you in "units" say you have "1 unit" of "SAP HANA Cloud"
+this means you can only create 1 of it. These are defined by the license in
+the global account.
+</p>
+<p>
+On each Space you can see the Services you want to add to your applications.
+Like you look for the service in the marketplace and add it to your space.
+Then you can manage it. Say you create a postgresql db, after creating it
+you can see the credentials and all that.
+</p>
+
+<h3 id='org-level'>org level</h3>
+<p>
+There will be one or many global accounts (which are tied to the leasing)
+that will have multiple subaccounts.
+</p>
+<p>
+You can divide the subaccounts by teams, so each team has a one or more
+subaccounts. Say you have a finance team, they can have 3 subaccounts, one for
+dev, qa and prod.
+</p>
+<p>
+Inside each subaccount you will have different spaces for different
+applications.
+</p>
+
+<h2 id='hands-on'>hands-on</h2>
+<p>
+You need to install the cloudfoundry cli, you can use brew
+</p>
+<pre>
+<code class="language-bash">
+brew install cloudfoundry/tap/cf-cli@8
+</code>
+</pre>
+
+<h3 id='basic-cmds'>basic commands</h3>
+<pre>
+<code class="language-bash">
+% cf version
+cf version 8.18.0+fad4bcb.2026-03-04
+</code>
+</pre>
+<p>
+To login you go to the subaccount, under the cloudfoundry info and pass it
+along.
+</p>
+<pre>
+<code class="language-bash">
+% cf login -a 'https://api.cf.us10-001.hana.ondemand.com' \ # endpoint
+    -o '156c6d83trial'  \ # org
+    -s dev  \ # space
+    -u '' # your email probably
+</code>
+</pre>
+<p>
+It will also ask you for your password
+</p>
+<pre>
+<code class="language-text">
+API endpoint:   https://api.cf.us10-001.hana.ondemand.com
+API version:    3.215.0
+user:           some@mail.com
+org:            156c6d83trial
+space:          dev
+</code>
+</pre>
+
+<h3 id='buildpacks'>buildpacks</h3>
+<p>
+a buildpack is software that will check some source code and transform it
+into runnable artifacts. It will analyse and check the best way to build it.
+</p>
+<p>
+You can list the available ones with
+</p>
+<pre>
+<code class="language-text">
+% cf buildpacks
+position   name                          stack      enabled  locked
+1          staticfile_buildpack          cflinuxfs4 true     false
+2          java_buildpack                cflinuxfs4 true     false
+3          nodejs_buildpack              cflinuxfs4 true     false
+4          go_buildpack                  cflinuxfs4 true     false
+5          python_buildpack              cflinuxfs4 true     false
+6          php_buildpack                 cflinuxfs4 true     false
+</code>
+</pre>
+
+<h3 id='cf-apps'>cf apps</h3>
+<p>
+remember you are logged into an space, most of this are similar to k8s stuff
+</p>
+<pre>
+<code class="language-bash">
+cf apps # list apps
+cf start|stop &lt;app-name&gt; # guess what it does
+cf logs &lt;app-name&gt; (--recent)
+cf scale &lt;app-name&gt; -i &lt;number of instances&gt;
+</code>
+</pre>
+
+<h2 id='deploy-app'>deploy an app</h2>
+<p>
+You can deploy an app in different ways, the simplest one is inside your app
+repo just use
+</p>
+<pre>
+<code class="language-bash">
+cf push &lt;name of app&gt;
+</code>
+</pre>
+<p>
+cf will create the buildpack necessary.
+</p>
+<p>
+You can create a <code>manifest.yaml</code> to setup how you want your app to
+run, like to set up specific stuff to overwrite.
+</p>
+<p>
+Here is an example of a simple manifest.yaml
+</p>
+<pre>
+<code class="language-yaml">
+applications:
+  - name: my-node-app-m-01
+    memory: 256M
+    path: ./
+    buildpacks:
+      - nodejs_buildpack
+</code>
+</pre>
+
+<h3 id='mta-yml'>mta.yml (sap specific)</h3>
+<p>
+There is this SAP specific way of deploying an application, it is helpful
+because this is a good way to bind different sap services to your application.
+</p>
+<p>
+You need to install a plugin onto <code>cf</code> in order to use it.
+</p>
+<pre>
+<code class="language-bash">
+cf add-plugin-repo CF-Community https://plugins.cloudfoundry.org
+cf install-plugin -f multiapps
+</code>
+</pre>
+<p>
+After this you will have the <code>deploy</code> command available.
+</p>
+<pre>
+<code class="language-bash">
+cf deploy
+</code>
+</pre>
+<p>
+First we need to package the application, this is done with the mta builder
+tool, you need to install it.
+<a href="https://sap.github.io/cloud-mta-build-tool/download/">
+sap.github.io/cloud-mta-build-tool/download</a>
+</p>
+<p>
+After that you create a mta.yaml file, here is a simple example:
+</p>
+<pre>
+<code class="language-yaml">
+ID: d-01.demo.sample
+_schema-version: 3.3.0
+version: 0.0.1
+
+modules:
+  - name: my-node-app-01
+    type: application
+    path: ./
+    parameters:
+      buildpacks:
+        - nodejs_buildpack
+      memory: 512M
+      tasks: # stuff to run when the app is put in cloudfoundry
+        - name: task-abc-1
+          command: npm install
+</code>
+</pre>
+<p>
+Then you can create the package with <code>mbt build</code>, now a new
+directory will be created called mta_archives, if you look inside you will
+find a <code>mtar</code> file, which is your app with some extra files.
+</p>
+<p>
+You can deploy the <code>mtar</code> file with
+</p>
+<pre>
+<code class="language-bash">
+mta deploy mta_archives/your-file.mtar
+</code>
+</pre>
+<p>
+This will talk with BTP upload the file, and deploy whatever you defined
+there.
+</p>
+
+<h2 id='binding-service'>binding service to app</h2>
+<p>
+First we need to create the service, you can create it from the cockpit, like
+going to service marketplace, finding the service and hit create or you can
+just use the cli. We will create a postgresql in this example.
+</p>
+<p>
+Note: some services have a hyperscaler option which basically means that the
+installation/setup time is lower than usual but price is higher.
+</p>
+<pre>
+<code class="language-bash">
+# -------------> &lt;service name&gt; &lt;plan&gt; &lt;instance name&gt;
+cf create-service postgresql-db trial my-post-db
+</code>
+</pre>
+<p>
+You can see the progress with the <code>cf services</code> command.
+</p>
+<p>
+Now you need to create a key that your app will use at runtime to auth against
+the db, you can use the <code>create-service-key</code> command for it.
+</p>
+<pre>
+<code class="language-bash">
+cf create-service-key my-post-db svc-key-2
+</code>
+</pre>
+
+<h3 id='credentials-code'>how do we get this credentials from inside our code
+base?</h3>
+<p>
+First you need to bind the application to the service, that can be done
+manually in the UI, using cli, or you can also add the binding to the
+manifest.yaml so it gets bound from the start.
+</p>
+<p>
+The latter is the standard way of doing it so here is an example
+</p>
+<pre>
+<code class="language-yaml">
+applications:
+  - name: my-node-app-m-01
+    memory: 256M
+    path: ./
+    buildpacks:
+      - nodejs_buildpack
+    services:
+      - my-post-db
+</code>
+</pre>
+<p>
+It is as easy as adding the service name there.
+</p>
+<p>
+Now inside the codebase the credentials will be exposed in the env under a
+<code>VCAP_SERVICES</code> key json the structure looks smth like this:
+</p>
+<pre>
+<code class="language-json">
+{
+    "VCAP_SERVICES": {
+        "service-instance-name": [{
+            "tags": ["user-created-tags"],
+            "credentials": {
+                "user": "user"
+            }
+        }]
+    }
+}
+</code>
+</pre>
+<p>
+You can verify the structure by checking the env of your app
+<code>cf env &lt;app-name&gt;</code> there you will see how it looks.
+</p>
+<p>
+You could load the env as usually, but if you are using npm, there is a nice
+package that helps the development of this. It will look something like this.
+</p>
+<pre>
+<code class="language-javascript">
+const xsenv = require("@sap/xsenv");
+xsenv.loadEnv();
+var xs_svcs = xsenv.getServices({
+    "db-post-tags-02": {tag: "db-post-tags-02"}
+});
+var conn_service = xs_svcs["db-post-tags-02"]
+</code>
+</pre>
+<p>
+You can query the services bound to the app by using tags. These are user
+created so you need to create the tag in your service first so this query can
+find it, again you can use the cli or the UI, it is as simple as doing this
+command.
+</p>
+<pre>
+<code class="language-bash">
+cf update-service my-post-db -t "db-post-tags-02"
+</code>
+</pre>
+<p>
+Now when you <code>cf push</code> your app, in the cockpit you will be able
+to see the binding, of the service and app, and inside the app you will be
+able to use the credentials.
+</p>
+<p>
+By using the <code>@sap/xsenv</code> module, you can have a
+<code>default-env.json</code> file in your local workstation, to emulate how
+the env would look like, so you can test. The structure is the same as the
+json <code>VCAP_SERVICES</code> listed above.
+</p>
+
+<h2 id='table'>table of contents</h2>
+<ul>
+  <li>
+    <a href='#overview-arch'>overview and arch</a>
+    <ul>
+        <li><a href="#cloudfoundry">cloudfoundry</a></li>
+        <li><a href="#kyma">kyma</a></li>
+    </ul>
+  </li>
+  <li>
+    <a href='#account-mgmt'>account management</a>
+    <ul>
+        <li><a href="#org-level">org level</a></li>
+    </ul>
+  </li>
+  <li>
+    <a href='#hands-on'>hands-on</a>
+    <ul>
+        <li><a href="#basic-cmds">basic commands</a></li>
+        <li><a href="#buildpacks">buildpacks</a></li>
+        <li><a href="#cf-apps">cf apps</a></li>
+    </ul>
+  </li>
+  <li>
+    <a href='#deploy-app'>deploy an app</a>
+    <ul>
+        <li><a href="#mta-yml">mta.yml</a></li>
+    </ul>
+  </li>
+  <li>
+    <a href='#binding-service'>binding service to app</a>
+    <ul>
+        <li><a href="#credentials-code">credentials from code</a></li>
+    </ul>
+  </li>
+</ul>
+
+<p><a href='#top'>↑ go to the top</a></p>
+
+</body>
+</html>

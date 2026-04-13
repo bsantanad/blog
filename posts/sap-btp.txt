@@ -228,3 +228,99 @@ You can deploy the `mtar` file with
 mta deploy mta_archives/your-file.mtar
 ```
 This will talk with BTP upload the file, and deploy whatever you defined there.
+
+
+Binding Service to App
+======================
+
+First we need to create the service, you can create it from the cockpit, like
+going to service marketplace, finding the service and hit create or you can
+just use the cli. We will create a postgresql in this example.
+
+Note: some services have a hyperscaler option which basically means that the
+installation/setup time is lower than usual but price is higher.
+
+```
+# -------------> <service name> <plan> <instance name>
+cf create-service postgresql-db trial my-post-db
+```
+
+You can see the progress with the `cf services` command.
+
+Now you need to create a key that your app will use at runtime to auth against
+the db, you can use the `create-service-key` command for it.
+
+```
+cf create-service-key my-post-db svc-key-2
+```
+
+How do we get this credentials from inside our code base?
+---------------------------------------------------------
+
+First you need to bind the application to the service, that can be done
+manually in the UI, using cli, or you can also add the binding to the
+manifest.yaml so it gets bound from the start.
+
+The latter is the standard way of doing it so here is an example
+
+```
+applications:
+  - name: my-node-app-m-01
+    memory: 256M
+    path: ./
+    buildpacks:
+      - nodejs_buildpack
+    services:
+      - my-post-db
+```
+
+It is as easy as adding the service name there.
+
+
+Now inside the codebase the credentials will be exposed in the env under a
+`VCAP_SERVICES` key json the structure looks smth like this:
+
+```
+{
+    "VCAP_SERVICES": {
+        "service-instance-name": [{
+            "tags": ["user-created-tags"],
+            "credentials": {
+                "user": "user"
+            }
+        }]
+    }
+}
+```
+
+You can verify the structure by checking the env of your app `cf env
+<app-name>` there you will see how it looks.
+
+You could load the env as usually, but if you are using npm, there is a nice
+package that helps the development of this. It will look something like this.
+
+```
+const xsenv = require("@sap/xsenv");
+xsenv.loadEnv();
+var xs_svcs = xsenv.getServices({
+    "db-post-tags-02": {tag: "db-post-tags-02"}
+});
+var conn_service = xs_svcs["db-post-tags-02"]
+```
+
+You can query the services bound to the app by using tags. These are user
+created so you need to create the tag in your service first so this query can
+find it, again you can use the cli or the UI, it is as simple as doing this
+command.
+
+```
+cf update-service my-post-db -t "db-post-tags-02"
+```
+
+Now when you `cf push` your app, in the cockpit you will be able to see the
+binding, of the service and app, and inside the app you will be able to use the
+credentials.
+
+By using the `@sap/xsenv` module, you can have a `default-env.json` file in
+your local workstation, to emulate how the env would look like, so you can
+test. The structure is the same as the json `VCAP_SERVICES` listed above.

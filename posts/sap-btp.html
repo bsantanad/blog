@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <link rel="stylesheet" href="/static/tty.css">
+    <link rel="stylesheet" href="/static/water.css">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta charset="UTF-8">
     <title>sap btp</title>
@@ -10,49 +10,57 @@
     <script>hljs.highlightAll();</script>
     <style>
         body {
+            font-family: open sans, "SF Pro Display", system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue";
+            max-width: 960px;
             margin: 0 auto;
-            padding: 1em;
-            max-width: 80ch;
         }
-        p {
-            margin-top: 1em;
-            margin-bottom: 1em !important;
+        h2 > a {
+            color: black;
+            text-decoration: none;
         }
-        h1, h2, h3 {
-            margin-top: 1.5em !important;
-            margin-bottom: 0.5em !important;
+        h2 > a:hover {
+            text-decoration: underline;
         }
-        ul, ol {
-            margin-bottom: 1em !important;
+        h2 > a:visited {
+            color: black;
         }
-        li {
-            margin-bottom: 0.5em !important;
+
+        a:visited {
+            color: blue;
+        }
+
+        .important {
+            background-color: lightgray;
+            padding: 1em
+        }
+
+        .chapter {
+            font-style: italic;
+
         }
     </style>
 </head>
 <body>
 <ul>
     <li>
-        <a style='padding-bottom: 1em;' href='/'>
-          🏡 home
-        </a>
+        <a href="/">home</a>
     </li>
     <li>
-        <a href='/posts/sap-btp.txt'>txt</a>
+        <a href="/posts/sap-btp.txt">txt</a>
     </li>
 </ul>
 <p>
-<a href='#table'>table of contents</a>
+<a href="#table">table of contents</a>
 </p>
 <p>
-<small style='margin-top: 1em;'><i>
+<small><i>
 Crated on <time datetime="2026-03-31">March 31, 2026</time>;
-</p>
 </i></small>
-<h1 id='top'>sap btp</h1>
-<p>
-(formerly sap cloud platform)
 </p>
+<h1 id="top">sap btp</h1>
+<blockquote>
+(formerly sap cloud platform)
+</blockquote>
 <p>
 sap btp is the platform as a service solution that sap provides, they rent
 you hardware operated by cloudfoundry or kyma (this is the OS that will be
@@ -61,11 +69,11 @@ give you sap services (sap hana db, sap uaa, etc) which you can connect with
 the cluster.
 </p>
 
-<h2 id='overview-arch'>overview and arch</h2>
+<h2 id="overview-arch">overview and arch</h2>
 
-<h3 id='cloudfoundry'>cloudfoundry</h3>
+<h3 id="cloudfoundry">cloudfoundry</h3>
 <p>
-TL;DR it provides a huge level of abstraction for the developer to only push
+<b>TL;DR</b> it provides a huge level of abstraction for the developer to only push
 its app and have it running, without having to worry to much about infra.
 </p>
 <p>
@@ -76,27 +84,29 @@ installation is out of the scope of this text.
 <p>
 When you push an application to the cluster, cloudfoundry will create a
 runtime environment in the cluster for the app to run. It basically creates a
-container that is called "Cell" in this context.
+container that is called <i>"Cell"</i> in this context.
 </p>
 <p>
 You can also connect SAP services to the cells.
 </p>
 
-<h3 id='kyma'>kyma</h3>
+<h3 id="kyma">kyma</h3>
 <p>
 You deploy k8s in your cluster, kyma is deployed on top k8s, kyma extends the
 applications running inside the pods. It gives them monitoring or
 authentication, and so on.
 </p>
 <p>
-kyma gives and "application connector" for the app in your pod to be able to
+kyma gives and <i>"application connector"</i> for the app in your pod to be able to
 trigger serverless functions, and connect with 3rd party or SAP services.
 </p>
 <p>
 Create a BTP trial account, open cockpit.
 </p>
 
-<h2 id='account-mgmt'>account management</h2>
+<hr>
+
+<h2 id="account-mgmt">account management</h2>
 <p>
 There is a global account, inside that there are subaccounts and inside that
 there are spaces, inside those we have the applications.
@@ -131,8 +141,8 @@ there are spaces, inside those we have the applications.
     </li>
 </ul>
 <p>
-You can go to "Entitlements" to see the services your subaccounts have access
-to, it will tell you in "units" say you have "1 unit" of "SAP HANA Cloud"
+You can go to <i>"Entitlements"</i> to see the services your subaccounts have access
+to, it will tell you in <i>"units"</i> say you have <i>"1 unit"</i> of <i>"SAP HANA Cloud"</i>
 this means you can only create 1 of it. These are defined by the license in
 the global account.
 </p>
@@ -143,7 +153,7 @@ Then you can manage it. Say you create a postgresql db, after creating it
 you can see the credentials and all that.
 </p>
 
-<h3 id='org-level'>org level</h3>
+<h3 id="org-level">org level</h3>
 <p>
 There will be one or many global accounts (which are tied to the leasing)
 that will have multiple subaccounts.
@@ -158,19 +168,21 @@ Inside each subaccount you will have different spaces for different
 applications.
 </p>
 
-<h2 id='hands-on'>hands-on</h2>
+<hr>
+
+<h2 id="hands-on">hands-on</h2>
 <p>
 You need to install the cloudfoundry cli, you can use brew
 </p>
 <pre>
-<code class="language-bash">
+<code>
 brew install cloudfoundry/tap/cf-cli@8
 </code>
 </pre>
 
-<h3 id='basic-cmds'>basic commands</h3>
+<h3 id="basic-cmds">basic commands</h3>
 <pre>
-<code class="language-bash">
+<code>
 % cf version
 cf version 8.18.0+fad4bcb.2026-03-04
 </code>
@@ -180,7 +192,7 @@ To login you go to the subaccount, under the cloudfoundry info and pass it
 along.
 </p>
 <pre>
-<code class="language-bash">
+<code>
 % cf login -a 'https://api.cf.us10-001.hana.ondemand.com' \ # endpoint
     -o '156c6d83trial'  \ # org
     -s dev  \ # space
@@ -191,7 +203,7 @@ along.
 It will also ask you for your password
 </p>
 <pre>
-<code class="language-text">
+<code>
 API endpoint:   https://api.cf.us10-001.hana.ondemand.com
 API version:    3.215.0
 user:           some@mail.com
@@ -200,7 +212,7 @@ space:          dev
 </code>
 </pre>
 
-<h3 id='buildpacks'>buildpacks</h3>
+<h3 id="buildpacks">buildpacks</h3>
 <p>
 a buildpack is software that will check some source code and transform it
 into runnable artifacts. It will analyse and check the best way to build it.
@@ -209,7 +221,7 @@ into runnable artifacts. It will analyse and check the best way to build it.
 You can list the available ones with
 </p>
 <pre>
-<code class="language-text">
+<code>
 % cf buildpacks
 position   name                          stack      enabled  locked
 1          staticfile_buildpack          cflinuxfs4 true     false
@@ -221,12 +233,12 @@ position   name                          stack      enabled  locked
 </code>
 </pre>
 
-<h3 id='cf-apps'>cf apps</h3>
+<h3 id="cf-apps">cf apps</h3>
 <p>
 remember you are logged into an space, most of this are similar to k8s stuff
 </p>
 <pre>
-<code class="language-bash">
+<code>
 cf apps # list apps
 cf start|stop &lt;app-name&gt; # guess what it does
 cf logs &lt;app-name&gt; (--recent)
@@ -234,13 +246,15 @@ cf scale &lt;app-name&gt; -i &lt;number of instances&gt;
 </code>
 </pre>
 
-<h2 id='deploy-app'>deploy an app</h2>
+<hr>
+
+<h2 id="deploy-app">deploy an app</h2>
 <p>
 You can deploy an app in different ways, the simplest one is inside your app
 repo just use
 </p>
 <pre>
-<code class="language-bash">
+<code>
 cf push &lt;name of app&gt;
 </code>
 </pre>
@@ -255,7 +269,7 @@ run, like to set up specific stuff to overwrite.
 Here is an example of a simple manifest.yaml
 </p>
 <pre>
-<code class="language-yaml">
+<code>
 applications:
   - name: my-node-app-m-01
     memory: 256M
@@ -265,7 +279,7 @@ applications:
 </code>
 </pre>
 
-<h3 id='mta-yml'>mta.yml (sap specific)</h3>
+<h3 id="mta-yml">mta.yml (sap specific)</h3>
 <p>
 There is this SAP specific way of deploying an application, it is helpful
 because this is a good way to bind different sap services to your application.
@@ -274,7 +288,7 @@ because this is a good way to bind different sap services to your application.
 You need to install a plugin onto <code>cf</code> in order to use it.
 </p>
 <pre>
-<code class="language-bash">
+<code>
 cf add-plugin-repo CF-Community https://plugins.cloudfoundry.org
 cf install-plugin -f multiapps
 </code>
@@ -283,7 +297,7 @@ cf install-plugin -f multiapps
 After this you will have the <code>deploy</code> command available.
 </p>
 <pre>
-<code class="language-bash">
+<code>
 cf deploy
 </code>
 </pre>
@@ -297,7 +311,7 @@ sap.github.io/cloud-mta-build-tool/download</a>
 After that you create a mta.yaml file, here is a simple example:
 </p>
 <pre>
-<code class="language-yaml">
+<code>
 ID: d-01.demo.sample
 _schema-version: 3.3.0
 version: 0.0.1
@@ -324,7 +338,7 @@ find a <code>mtar</code> file, which is your app with some extra files.
 You can deploy the <code>mtar</code> file with
 </p>
 <pre>
-<code class="language-bash">
+<code>
 mta deploy mta_archives/your-file.mtar
 </code>
 </pre>
@@ -333,7 +347,9 @@ This will talk with BTP upload the file, and deploy whatever you defined
 there.
 </p>
 
-<h2 id='binding-service'>binding service to app</h2>
+<hr>
+
+<h2 id="binding-service">binding service to app</h2>
 <p>
 First we need to create the service, you can create it from the cockpit, like
 going to service marketplace, finding the service and hit create or you can
@@ -344,7 +360,7 @@ Note: some services have a hyperscaler option which basically means that the
 installation/setup time is lower than usual but price is higher.
 </p>
 <pre>
-<code class="language-bash">
+<code>
 # -------------> &lt;service name&gt; &lt;plan&gt; &lt;instance name&gt;
 cf create-service postgresql-db trial my-post-db
 </code>
@@ -357,12 +373,12 @@ Now you need to create a key that your app will use at runtime to auth against
 the db, you can use the <code>create-service-key</code> command for it.
 </p>
 <pre>
-<code class="language-bash">
+<code>
 cf create-service-key my-post-db svc-key-2
 </code>
 </pre>
 
-<h3 id='credentials-code'>how do we get this credentials from inside our code
+<h3 id="credentials-code">how do we get this credentials from inside our code
 base?</h3>
 <p>
 First you need to bind the application to the service, that can be done
@@ -373,7 +389,7 @@ manifest.yaml so it gets bound from the start.
 The latter is the standard way of doing it so here is an example
 </p>
 <pre>
-<code class="language-yaml">
+<code>
 applications:
   - name: my-node-app-m-01
     memory: 256M
@@ -392,7 +408,7 @@ Now inside the codebase the credentials will be exposed in the env under a
 <code>VCAP_SERVICES</code> key json the structure looks smth like this:
 </p>
 <pre>
-<code class="language-json">
+<code>
 {
     "VCAP_SERVICES": {
         "service-instance-name": [{
@@ -414,7 +430,7 @@ You could load the env as usually, but if you are using npm, there is a nice
 package that helps the development of this. It will look something like this.
 </p>
 <pre>
-<code class="language-javascript">
+<code>
 const xsenv = require("@sap/xsenv");
 xsenv.loadEnv();
 var xs_svcs = xsenv.getServices({
@@ -430,7 +446,7 @@ find it, again you can use the cli or the UI, it is as simple as doing this
 command.
 </p>
 <pre>
-<code class="language-bash">
+<code>
 cf update-service my-post-db -t "db-post-tags-02"
 </code>
 </pre>
@@ -446,23 +462,25 @@ the env would look like, so you can test. The structure is the same as the
 json <code>VCAP_SERVICES</code> listed above.
 </p>
 
-<h2 id='table'>table of contents</h2>
+<hr>
+
+<h2 id="table">table of contents</h2>
 <ul>
   <li>
-    <a href='#overview-arch'>overview and arch</a>
+    <a href="#overview-arch">overview and arch</a>
     <ul>
         <li><a href="#cloudfoundry">cloudfoundry</a></li>
         <li><a href="#kyma">kyma</a></li>
     </ul>
   </li>
   <li>
-    <a href='#account-mgmt'>account management</a>
+    <a href="#account-mgmt">account management</a>
     <ul>
         <li><a href="#org-level">org level</a></li>
     </ul>
   </li>
   <li>
-    <a href='#hands-on'>hands-on</a>
+    <a href="#hands-on">hands-on</a>
     <ul>
         <li><a href="#basic-cmds">basic commands</a></li>
         <li><a href="#buildpacks">buildpacks</a></li>
@@ -470,20 +488,20 @@ json <code>VCAP_SERVICES</code> listed above.
     </ul>
   </li>
   <li>
-    <a href='#deploy-app'>deploy an app</a>
+    <a href="#deploy-app">deploy an app</a>
     <ul>
         <li><a href="#mta-yml">mta.yml</a></li>
     </ul>
   </li>
   <li>
-    <a href='#binding-service'>binding service to app</a>
+    <a href="#binding-service">binding service to app</a>
     <ul>
         <li><a href="#credentials-code">credentials from code</a></li>
     </ul>
   </li>
 </ul>
 
-<p><a href='#top'>↑ go to the top</a></p>
+<p><a href="#top">go to the top</a></p>
 
 </body>
 </html>
